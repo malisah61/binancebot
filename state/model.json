@@ -1,22 +1,20 @@
 {
- "time": 1794584624563,
+ "time": 1794596086795,
  "tfs": {
   "15m": {
    "weights": {
-    "trend": 20,
-    "momentum": 18,
-    "oi": 15,
-    "volume": 10,
-    "deriv": 10,
-    "smc": 10,
-    "vwap": 5
+    "momentum": -33.5,
+    "volume": -20.7,
+    "deriv": -26.0,
+    "smc": 8.6,
+    "vwap": 10.6
    },
-   "long_th": 58,
-   "short_th": 42.99,
-   "learned": false,
-   "test_avg_R": -0.037,
-   "test_win": 47.4,
-   "baseline_test_avg_R": -0.0,
+   "long_th": 70,
+   "short_th": 30,
+   "learned": true,
+   "test_avg_R": 0.011,
+   "test_win": 49.6,
+   "baseline_test_avg_R": 0.003,
    "live_weights": {
     "trend": 20,
     "momentum": 18,
@@ -39,49 +37,46 @@
    "strategy_adopted": false,
    "strategy_test": {
     "5": {
-     "n": 9075,
-     "win": 49.3,
-     "avg_roe": -0.54,
-     "med_roe": -0.87,
-     "pf": 0.82,
-     "avg_R": -0.0,
-     "net_100": -4944.0,
-     "max_dd_100": 5560.0,
+     "n": 2988,
+     "win": 46.8,
+     "avg_roe": -0.74,
+     "med_roe": -1.87,
+     "pf": 0.78,
+     "avg_R": -0.047,
+     "net_100": -2225.0,
+     "max_dd_100": 2353.0,
      "liq": 0,
-     "avg_bars": 9.9,
+     "avg_bars": 9.5,
      "reasons": {
-      "TP1→BE": 2245,
-      "SL": 4527,
-      "TP2": 2258,
-      "SÜRE": 45
+      "TP1→BE": 686,
+      "SL": 1565,
+      "TP2": 722,
+      "SÜRE": 15
      },
      "long": {
-      "n": 3713,
-      "win": 46.2
+      "n": 1183,
+      "win": 44.7
      },
      "short": {
-      "n": 5362,
-      "win": 51.5
+      "n": 1805,
+      "win": 48.1
      }
     }
    }
   },
   "30m": {
    "weights": {
-    "trend": 20,
-    "momentum": 18,
-    "oi": 15,
-    "volume": 10,
-    "deriv": 10,
-    "smc": 10,
-    "vwap": 5
+    "momentum": -37.8,
+    "volume": 8.2,
+    "deriv": -29.9,
+    "vwap": 18.5
    },
-   "long_th": 58,
-   "short_th": 42.99,
-   "learned": false,
-   "test_avg_R": -0.055,
-   "test_win": 46.6,
-   "baseline_test_avg_R": -0.043,
+   "long_th": 66,
+   "short_th": 34,
+   "learned": true,
+   "test_avg_R": 0.009,
+   "test_win": 49.1,
+   "baseline_test_avg_R": -0.035,
    "live_weights": {
     "trend": 20,
     "momentum": 18,
@@ -104,29 +99,29 @@
    "strategy_adopted": false,
    "strategy_test": {
     "5": {
-     "n": 4395,
-     "win": 47.7,
-     "avg_roe": -0.78,
-     "med_roe": -2.44,
-     "pf": 0.82,
-     "avg_R": -0.034,
-     "net_100": -3426.0,
-     "max_dd_100": 4176.0,
+     "n": 1470,
+     "win": 49.5,
+     "avg_roe": -0.66,
+     "med_roe": -1.31,
+     "pf": 0.85,
+     "avg_R": -0.005,
+     "net_100": -969.0,
+     "max_dd_100": 1294.0,
      "liq": 0,
-     "avg_bars": 10.3,
+     "avg_bars": 9.9,
      "reasons": {
-      "TP1→BE": 1019,
-      "TP2": 1069,
-      "SL": 2264,
-      "SÜRE": 43
+      "TP1→BE": 364,
+      "SL": 733,
+      "TP2": 361,
+      "SÜRE": 12
      },
      "long": {
-      "n": 1634,
-      "win": 44.0
+      "n": 520,
+      "win": 47.5
      },
      "short": {
-      "n": 2761,
-      "win": 49.9
+      "n": 950,
+      "win": 50.5
      }
     }
    }
@@ -144,9 +139,9 @@
    "long_th": 58,
    "short_th": 42.99,
    "learned": false,
-   "test_avg_R": -0.06,
-   "test_win": 46.8,
-   "baseline_test_avg_R": -0.004,
+   "test_avg_R": -0.031,
+   "test_win": 47.6,
+   "baseline_test_avg_R": 0.004,
    "live_weights": {
     "trend": 20,
     "momentum": 18,
@@ -169,30 +164,29 @@
    "strategy_adopted": false,
    "strategy_test": {
     "5": {
-     "n": 2110,
-     "win": 48.9,
-     "avg_roe": -0.66,
-     "med_roe": -2.27,
-     "pf": 0.89,
-     "avg_R": 0.0,
-     "net_100": -1393.0,
-     "max_dd_100": 2796.0,
-     "liq": 1,
-     "avg_bars": 10.7,
+     "n": 731,
+     "win": 55.0,
+     "avg_roe": 0.27,
+     "med_roe": 2.56,
+     "pf": 1.05,
+     "avg_R": 0.099,
+     "net_100": 201.0,
+     "max_dd_100": 705.0,
+     "liq": 0,
+     "avg_bars": 10.3,
      "reasons": {
-      "TP1→BE": 471,
-      "SL": 1052,
-      "TP2": 536,
-      "SÜRE": 50,
-      "LİKİDASYON": 1
+      "TP1→BE": 201,
+      "SL": 320,
+      "TP2": 192,
+      "SÜRE": 18
      },
      "long": {
-      "n": 744,
-      "win": 41.9
+      "n": 233,
+      "win": 51.5
      },
      "short": {
-      "n": 1366,
-      "win": 52.7
+      "n": 498,
+      "win": 56.6
      }
     }
    }
@@ -210,9 +204,9 @@
    "long_th": 58,
    "short_th": 42,
    "learned": true,
-   "test_avg_R": 0.04,
-   "test_win": 52.5,
-   "baseline_test_avg_R": 0.022,
+   "test_avg_R": 0.053,
+   "test_win": 53.1,
+   "baseline_test_avg_R": 0.031,
    "live_weights": {
     "trend": 20,
     "momentum": 18,
@@ -235,55 +229,55 @@
    "strategy_adopted": true,
    "strategy_test": {
     "5": {
-     "n": 236,
-     "win": 47.0,
-     "avg_roe": 1.71,
-     "med_roe": -4.98,
-     "pf": 1.21,
-     "avg_R": 0.151,
-     "net_100": 404.0,
-     "max_dd_100": 372.0,
+     "n": 231,
+     "win": 47.6,
+     "avg_roe": 2.3,
+     "med_roe": -4.65,
+     "pf": 1.28,
+     "avg_R": 0.17,
+     "net_100": 532.0,
+     "max_dd_100": 339.0,
      "liq": 0,
-     "avg_bars": 7.5,
+     "avg_bars": 7.6,
      "reasons": {
-      "SL": 123,
+      "SL": 118,
       "TP2": 58,
-      "TP1→BE": 47,
-      "SÜRE": 8
+      "TP1→BE": 44,
+      "SÜRE": 11
      },
      "long": {
-      "n": 58,
-      "win": 34.5
+      "n": 55,
+      "win": 36.4
      },
      "short": {
-      "n": 178,
+      "n": 176,
       "win": 51.1
      }
     },
     "10": {
-     "n": 236,
-     "win": 47.0,
-     "avg_roe": 3.59,
-     "med_roe": -9.97,
-     "pf": 1.22,
-     "avg_R": 0.153,
-     "net_100": 846.0,
-     "max_dd_100": 746.0,
+     "n": 231,
+     "win": 47.6,
+     "avg_roe": 4.77,
+     "med_roe": -9.31,
+     "pf": 1.29,
+     "avg_R": 0.172,
+     "net_100": 1101.0,
+     "max_dd_100": 679.0,
      "liq": 2,
-     "avg_bars": 7.4,
+     "avg_bars": 7.6,
      "reasons": {
-      "SL": 121,
+      "SL": 116,
       "TP2": 58,
-      "TP1→BE": 47,
-      "SÜRE": 8,
+      "TP1→BE": 44,
+      "SÜRE": 11,
       "LİKİDASYON": 2
      },
      "long": {
-      "n": 58,
-      "win": 34.5
+      "n": 55,
+      "win": 36.4
      },
      "short": {
-      "n": 178,
+      "n": 176,
       "win": 51.1
      }
     }

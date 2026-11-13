@@ -282,6 +282,21 @@ def run_strategy(coins, tf, strat, lev, part, split_t, scores):
     return out
 
 
+def apply_contest(m, c, base_live):
+    """Model kararı: TEST'te doğrulanan strateji benimsenir (demo/gerçek emir de bunu izler).
+    Doğrulanan yoksa, eğitimin en iyisi TEST'te mevcut kuraldan iyiyse kâğıt hesaplarda 'ileri test' olarak denenir
+    (para/demo emri yok; canlı veriyle ek kanıt toplamak için)."""
+    top = c["top"][0] if c["top"] else None
+    bl = c["live_baseline_test"]
+    if c["adopted"]:
+        m.update(strategy=top["strategy"], strategy_name=top["name"], strategy_adopted=True, strategy_mode="doğrulandı", strategy_test=top["test"])
+    elif top and top["test"]["5"].get("n", 0) >= 40 and (top["test"]["5"].get("avg_R") or -9) > (bl.get("avg_R") or -9) \
+            and (top["test"]["5"].get("pf") or 0) > (bl.get("pf") or 0):
+        m.update(strategy=top["strategy"], strategy_name=top["name"], strategy_adopted=False, strategy_mode="ileri test", strategy_test=top["test"])
+    else:
+        m.update(strategy=base_live, strategy_name=v5.strategy_name(base_live), strategy_adopted=False, strategy_mode="varsayılan", strategy_test={"5": bl})
+
+
 def spearman(a, b):
     m = np.isfinite(a) & np.isfinite(b)
     if m.sum() < 50:
@@ -441,10 +456,7 @@ def run(raw, today, t0=None):
                   and win["train"]["avg_R"] > 0)
         out["contest"] = {"tested": len(res), "top": top, "live_baseline_test": bl_test, "adopted": ok}
         model["tfs"][tf]["live_weights"] = LIVE_W
-        model["tfs"][tf]["strategy"] = win["strategy"] if ok else base_live
-        model["tfs"][tf]["strategy_name"] = win["name"] if ok else v5.strategy_name(base_live)
-        model["tfs"][tf]["strategy_adopted"] = ok
-        model["tfs"][tf]["strategy_test"] = win["test"] if ok else {"5": bl_test}
+        apply_contest(model["tfs"][tf], out["contest"], base_live)
         print(f"{tf} yarışma: {len(res)} strateji, kazanan {win['name'] if win else '-'} test {win['test']['5'] if win else '-'} -> {'BENİMSENDİ' if ok else 'reddedildi'}")
         report["tfs"][tf] = out
         print(f"{tf}: {len(bars)} mum, baz test {bt}, yeni {bname}/{blt} test {ot} -> {'BENİMSENDİ' if adopt else 'mevcut kalır'} ({time.time()-tt0:.0f} sn)")

@@ -132,7 +132,7 @@ loadModel();
 
 // Botun araştırmada doğrulanmış stratejisi: bu coinde şimdi işlem açar mıydı?
 const LIVE_W = {trend: 20, momentum: 18, volume: 10, smc: 10, vwap: 5};
-function botStrategy(tf) { const m = S.model && S.model.tfs && S.model.tfs[tf]; return m && m.strategy ? {st: m.strategy, name: m.strategy_name, adopted: m.strategy_adopted, test: m.strategy_test, w: m.live_weights || LIVE_W} : {st: {type: "trend", lt: 58, st: 42.99, sl: 1.5, tp1: 1.5, tp2: 3}, name: "Varsayılan trend takibi", adopted: false, w: LIVE_W}; }
+function botStrategy(tf) { const m = S.model && S.model.tfs && S.model.tfs[tf]; return m && m.strategy ? {st: m.strategy, name: m.strategy_name, adopted: m.strategy_adopted, mode: m.strategy_mode, test: m.strategy_test, w: m.live_weights || LIVE_W} : {st: {type: "trend", lt: 58, st: 42.99, sl: 1.5, tp1: 1.5, tp2: 3}, name: "Varsayılan trend takibi", adopted: false, w: LIVE_W}; }
 function botSignal(m, comps, tf) {
   const B = botStrategy(tf), st = B.st; let tw = 0, ts = 0;
   for (const [k, w] of Object.entries(B.w)) if (comps[k] !== undefined && w) { tw += Math.abs(w); ts += w * comps[k]; }
@@ -364,7 +364,7 @@ function botCard(a) {
   const sg = botSignal({z: m.z, rsi: m.rsi, htf: m.htf, ext: (a.price - m.vwap) / (m.atr || 1), sw: m.sweeps, pos: m.pos, fromLo: m.fromLo, fromHi: m.fromHi,
     lo48: m.lo48, hi48: m.hi48, lo12: m.lo12, hi12: m.hi12, atr: m.atr, price: a.price}, comps, a.tf); const B = sg.B; const t = B.test && B.test["5"]; const L = sg.limit;
   return `<div class="card"><h3>🤖 Botun stratejisi (${a.tf})</h3><div><b>${B.name}</b></div>
-    <div class="mut sm" style="margin-top:3px">${B.adopted ? `✅ Geçmiş veride, modelin görmediği dönemde doğrulandı${t ? `: ${t.n} işlem, kazanma %${t.win}, ort. R ${t.avg_R}, PF ${t.pf}` : ""}` : "⚠️ Henüz doğrulanmış bir strateji yok; varsayılan kural kullanılıyor"}</div>
+    <div class="mut sm" style="margin-top:3px">${B.adopted ? `✅ Geçmiş veride, modelin görmediği dönemde doğrulandı${t ? `: ${t.n} işlem, kazanma %${t.win}, ort. R ${t.avg_R}, kâr faktörü ${t.pf}` : ""}` : B.mode === "ileri test" ? `🧪 İleri test: görülmemiş dönemde mevcut kuraldan iyi ama komisyon sonrası henüz kârlı değil${t ? ` (${t.n} işlem, ort. R ${t.avg_R}, kâr faktörü ${t.pf})` : ""}. Sadece kâğıt hesapta deneniyor, demo emri verilmez.` : "⚠️ Henüz doğrulanmış bir strateji yok; varsayılan kural kullanılıyor"}</div>
     <div class="row between" style="margin-top:8px"><span>Bu coinde şimdi:</span>${sg.dir > 0 ? `<span class="badge b-sl">${L ? "LİMİT ALIŞ BEKLER" : "LONG AÇAR"}</span>` : sg.dir < 0 ? `<span class="badge b-ss">${L ? "LİMİT SATIŞ BEKLER" : "SHORT AÇAR"}</span>` : '<span class="badge b-n">İŞLEM YOK</span>'}</div>
     <div class="mut sm">${sg.why}</div>
     ${L ? `<div class="kv" style="margin-top:8px"><div><span>Limit giriş</span><b>${fmt(L.entry)} <small class="mut">${pct(L.entry / a.price - 1)}</small></b></div><div><span>Geçerlilik</span><b>${L.expire} mum</b></div>

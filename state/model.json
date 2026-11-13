@@ -23,46 +23,79 @@
     "vwap": 5
    },
    "strategy": {
-    "type": "trend",
-    "lt": 58,
-    "st": 42.99,
-    "max_ext": null,
-    "htf": null,
-    "sl": 1.5,
+    "type": "pullback",
+    "lt": 66,
+    "st": 34,
+    "max_pos": 0.5,
+    "entry": "fib",
+    "fib": 0.382,
+    "expire": 6,
+    "stop_lb": 12,
+    "buf": 0.3,
+    "max_risk": 3.0,
     "tp1": 1.5,
     "tp2": 3.0,
+    "htf": null,
     "max_new": 3
    },
-   "strategy_name": "Trend takibi (skor ≥58 / ≤43), SL1.5/TP1.5-3.0",
+   "strategy_name": "Geri çekilmede limit giriş (skor ≥66 / ≤34, dip-tepe aralığının en fazla %50'inde, 0.382 Fibonacci geri çekilmesine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.5R / 3.0R)",
    "strategy_adopted": false,
    "strategy_test": {
     "5": {
-     "n": 2988,
-     "win": 46.8,
-     "avg_roe": -0.74,
-     "med_roe": -1.87,
-     "pf": 0.78,
-     "avg_R": -0.047,
-     "net_100": -2225.0,
-     "max_dd_100": 2353.0,
+     "n": 778,
+     "win": 42.8,
+     "avg_roe": -0.14,
+     "med_roe": -2.88,
+     "pf": 0.97,
+     "avg_R": 0.067,
+     "net_100": -112.0,
+     "max_dd_100": 1028.0,
      "liq": 0,
-     "avg_bars": 9.5,
+     "avg_bars": 27.1,
      "reasons": {
-      "TP1→BE": 686,
-      "SL": 1565,
-      "TP2": 722,
-      "SÜRE": 15
+      "SL": 430,
+      "TP1→BE": 148,
+      "TP2": 143,
+      "SÜRE": 57
      },
      "long": {
-      "n": 1183,
-      "win": 44.7
+      "n": 291,
+      "win": 42.6
      },
      "short": {
-      "n": 1805,
-      "win": 48.1
+      "n": 487,
+      "win": 42.9
+     }
+    },
+    "10": {
+     "n": 778,
+     "win": 42.8,
+     "avg_roe": -0.24,
+     "med_roe": -5.75,
+     "pf": 0.97,
+     "avg_R": 0.068,
+     "net_100": -186.0,
+     "max_dd_100": 2014.0,
+     "liq": 3,
+     "avg_bars": 27.1,
+     "reasons": {
+      "SL": 427,
+      "TP1→BE": 148,
+      "TP2": 143,
+      "SÜRE": 57,
+      "LİKİDASYON": 3
+     },
+     "long": {
+      "n": 291,
+      "win": 42.6
+     },
+     "short": {
+      "n": 487,
+      "win": 42.9
      }
     }
-   }
+   },
+   "strategy_mode": "ileri test"
   },
   "30m": {
    "weights": {
@@ -124,7 +157,8 @@
       "win": 50.5
      }
     }
-   }
+   },
+   "strategy_mode": "varsayılan"
   },
   "1h": {
    "weights": {
@@ -189,7 +223,8 @@
       "win": 56.6
      }
     }
-   }
+   },
+   "strategy_mode": "varsayılan"
   },
   "4h": {
    "weights": {
@@ -281,7 +316,8 @@
       "win": 51.1
      }
     }
-   }
+   },
+   "strategy_mode": "doğrulandı"
   }
  }
 }

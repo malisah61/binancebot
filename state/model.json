@@ -33,7 +33,7 @@
     "sl": 1.5,
     "tp1": 1.5,
     "tp2": 3.0,
-    "max_new": 99
+    "max_new": 3
    },
    "strategy_name": "Trend takibi (skor ≥58 / ≤43), SL1.5/TP1.5-3.0",
    "strategy_adopted": false,
@@ -98,7 +98,7 @@
     "sl": 1.5,
     "tp1": 1.5,
     "tp2": 3.0,
-    "max_new": 99
+    "max_new": 3
    },
    "strategy_name": "Trend takibi (skor ≥58 / ≤43), SL1.5/TP1.5-3.0",
    "strategy_adopted": false,
@@ -163,7 +163,7 @@
     "sl": 1.5,
     "tp1": 1.5,
     "tp2": 3.0,
-    "max_new": 99
+    "max_new": 3
    },
    "strategy_name": "Trend takibi (skor ≥58 / ≤43), SL1.5/TP1.5-3.0",
    "strategy_adopted": false,

@@ -414,7 +414,7 @@ def run(raw, today, t0=None):
         for obj, stg, stt in res[:5]:
             te = {str(lev): sim.stats(run_strategy(coins, tf, stg, lev, "test", split_t, live_scores)) for lev in LEVS}
             top.append({"strategy": stg, "name": v5.strategy_name(stg), "train": stt, "test": te})
-        base_live = {"type": "trend", "lt": 58, "st": 42.99, "max_ext": None, "htf": None, "sl": 1.5, "tp1": 1.5, "tp2": 3.0, "max_new": 99}
+        base_live = {"type": "trend", "lt": 58, "st": 42.99, "max_ext": None, "htf": None, "sl": 1.5, "tp1": 1.5, "tp2": 3.0, "max_new": 3}
         bl_test = sim.stats(run_strategy(coins, tf, base_live, 5, "test", split_t, live_scores))
         win = top[0] if top else None
         ok = bool(win and win["test"]["5"].get("n", 0) >= 40 and (win["test"]["5"].get("avg_R") or -9) > 0

@@ -212,6 +212,57 @@ def run_trades(coins, tf, w, lt, st, lev, part, split_t):
     return out
 
 
+LIVE_W = {"trend": 20, "momentum": 18, "volume": 10, "smc": 10, "vwap": 5}  # canlıda da hesaplanabilen bileşenler
+EXITS = [(1.5, 1.5, 3.0), (1.0, 1.5, 2.5), (2.0, 1.0, 2.0)]
+
+
+def strategy_grid():
+    g = []
+    for sl, t1, t2 in EXITS:
+        ex = {"sl": sl, "tp1": t1, "tp2": t2, "max_new": 3}
+        for lt in (58, 66, 74):
+            for me in (None, 1.0, 2.0):
+                for h in (None, "with"):
+                    g.append({"type": "trend", "lt": lt, "st": 100 - lt, "max_ext": me, "htf": h, **ex})
+        for z in (2.0, 2.5, 3.0):
+            for hi, lo in ((70, 30), (75, 25)):
+                for sw in (False, True):
+                    g.append({"type": "meanrev", "z": z, "rsi_hi": hi, "rsi_lo": lo, "need_sweep": sw, "htf": None, **ex})
+        for h in (None, "with", "against"):
+            g.append({"type": "sweep", "htf": h, **ex})
+    return g
+
+
+def run_strategy(coins, tf, strat, lev, part, split_t, scores):
+    sig = {}
+    rows = []
+    for sym, (df, R, fm) in coins.items():
+        d, strength = v5.signals(R, scores[sym], strat)
+        tt = df["t"].values
+        if part == "train":
+            d = np.where(tt < split_t, d, 0)
+        elif part == "test":
+            d = np.where(tt >= split_t, d, 0)
+        sig[sym] = d
+        nz = np.flatnonzero(d)
+        if len(nz):
+            rows.append(pd.DataFrame({"t": tt[nz], "sym": sym, "i": nz, "s": strength[nz]}))
+    mx = strat.get("max_new", 99)
+    if rows and mx < 99:  # aynı mumda en fazla `max_new` yeni işlem (korelasyon/küme riski)
+        allr = pd.concat(rows).sort_values(["t", "s"], ascending=[True, False])
+        drop = allr[allr.groupby("t").cumcount() >= mx]
+        for sym, grp in drop.groupby("sym"):
+            sig[sym][grp["i"].values] = 0
+    out = []
+    for sym, (df, R, fm) in coins.items():
+        tr = sim.simulate(df["t"].values, df["h"].values, df["l"].values, df["c"].values, R["atr"].values, sig[sym], lev,
+                          v5.TF_MS[tf], fmark=fm, max_hold=MAX_HOLD[tf], sl_m=strat["sl"], tp1_m=strat["tp1"], tp2_m=strat["tp2"])
+        for x in tr:
+            x["sym"] = sym
+        out += tr
+    return out
+
+
 def spearman(a, b):
     m = np.isfinite(a) & np.isfinite(b)
     if m.sum() < 50:
@@ -351,6 +402,31 @@ def run(raw, today, t0=None):
         out["optimized"] = {"name": bname, "weights": bw, "long_th": blt, "short_th": 100 - blt, "test": opt_test, "adopted": adopt}
         model["tfs"][tf] = {"weights": bw if adopt else base_w, "long_th": blt if adopt else 58, "short_th": (100 - blt) if adopt else 42.99,
                             "learned": adopt, "test_avg_R": ot.get("avg_R"), "test_win": ot.get("win"), "baseline_test_avg_R": bt.get("avg_R")}
+        # 4) STRATEJİ YARIŞMASI (yalnız canlıda da hesaplanabilen veriler)
+        live_scores = {sym: score_with(R, LIVE_W) for sym, (df, R, fm) in coins.items()}
+        res = []
+        for stg in strategy_grid():
+            stt = sim.stats(run_strategy(coins, tf, stg, 5, "train", split_t, live_scores))
+            if stt.get("n", 0) >= 60:
+                res.append((stt["avg_R"] * np.sqrt(stt["n"]), stg, stt))
+        res.sort(key=lambda x: -x[0])
+        top = []
+        for obj, stg, stt in res[:5]:
+            te = {str(lev): sim.stats(run_strategy(coins, tf, stg, lev, "test", split_t, live_scores)) for lev in LEVS}
+            top.append({"strategy": stg, "name": v5.strategy_name(stg), "train": stt, "test": te})
+        base_live = {"type": "trend", "lt": 58, "st": 42.99, "max_ext": None, "htf": None, "sl": 1.5, "tp1": 1.5, "tp2": 3.0, "max_new": 99}
+        bl_test = sim.stats(run_strategy(coins, tf, base_live, 5, "test", split_t, live_scores))
+        win = top[0] if top else None
+        ok = bool(win and win["test"]["5"].get("n", 0) >= 40 and (win["test"]["5"].get("avg_R") or -9) > 0
+                  and (win["test"]["5"].get("pf") or 0) > 1.05 and (win["test"]["5"].get("avg_R") or -9) > (bl_test.get("avg_R") or -9)
+                  and win["train"]["avg_R"] > 0)
+        out["contest"] = {"tested": len(res), "top": top, "live_baseline_test": bl_test, "adopted": ok}
+        model["tfs"][tf]["live_weights"] = LIVE_W
+        model["tfs"][tf]["strategy"] = win["strategy"] if ok else base_live
+        model["tfs"][tf]["strategy_name"] = win["name"] if ok else v5.strategy_name(base_live)
+        model["tfs"][tf]["strategy_adopted"] = ok
+        model["tfs"][tf]["strategy_test"] = win["test"] if ok else {"5": bl_test}
+        print(f"{tf} yarışma: {len(res)} strateji, kazanan {win['name'] if win else '-'} test {win['test']['5'] if win else '-'} -> {'BENİMSENDİ' if ok else 'reddedildi'}")
         report["tfs"][tf] = out
         print(f"{tf}: {len(bars)} mum, baz test {bt}, yeni {bname}/{blt} test {ot} -> {'BENİMSENDİ' if adopt else 'mevcut kalır'} ({time.time()-tt0:.0f} sn)")
 
@@ -402,6 +478,19 @@ def to_markdown(rep):
     L += ["", "Ağırlıklar:"]
     for tf, o in rep["tfs"].items():
         L.append(f"- {tf}: " + ", ".join(f"{v5.NAMES[k]} {v}" for k, v in o["optimized"]["weights"].items()))
+    L += ["", "## 4. Strateji yarışması (yalnız canlı botun da görebildiği veriler; eğitimde seçildi, TEST'te sınandı)", ""]
+    for tf, o in rep["tfs"].items():
+        c = o.get("contest")
+        if not c:
+            continue
+        bl = c["live_baseline_test"]
+        L += [f"### {tf} — {c['tested']} strateji denendi · {'✅ kazanan benimsendi' if c['adopted'] else '❌ hiçbiri yeterince iyi değil, mevcut kalır'}", "",
+              f"Mevcut (trend, filtresiz) TEST: {bl.get('n')} işlem, kazanma %{_f(bl.get('win'))}, ort R {_f(bl.get('avg_R'))}, PF {_f(bl.get('pf'))}", "",
+              "| # | Strateji | Eğitim ort R (n) | TEST ort R | TEST kazanma | TEST PF | 5x ort ROE | 10x ort ROE | 10x likidasyon |", "|---|---|---|---|---|---|---|---|---|"]
+        for i, x in enumerate(c["top"], 1):
+            t5, t10 = x["test"]["5"], x["test"]["10"]
+            L.append(f"| {i} | {x['name']} | {x['train']['avg_R']} ({x['train']['n']}) | {_f(t5.get('avg_R'))} | %{_f(t5.get('win'))} ({t5.get('n')}) | {_f(t5.get('pf'))} | %{_f(t5.get('avg_roe'))} | %{_f(t10.get('avg_roe'))} | {_f(t10.get('liq'))} |")
+        L.append("")
     L += ["", "IC (bilgi katsayısı): gösterge puanı ile sonraki getiri arasındaki sıralama korelasyonu. Piyasada 0.02–0.05 bile anlamlıdır; negatif ise gösterge ters çalışıyor demektir.",
           "Geçmiş performans geleceği garanti etmez."]
     return "\n".join(L)
@@ -424,7 +513,11 @@ def notify(rep):
                      f"5x ort ROE %{_f(b5.get('avg_roe'))} · 10x %{_f(b10.get('avg_roe'))} (likidasyon {_f(b10.get('liq'))})\n"
                      f"En faydalı: {', '.join(f'{n} {ic:+.3f}' for n, ic in best[:3])}\n"
                      f"En zayıf: {', '.join(f'{n} {ic:+.3f}' for n, ic in best[-2:])}\n"
-                     f"Yeni model: {'✅ benimsendi' if op['adopted'] else '❌ mevcut kalır'} (test ort R {_f(op['test']['5'].get('avg_R'))})")
+                     f"Yeni ağırlıklar: {'✅' if op['adopted'] else '❌'} (test ort R {_f(op['test']['5'].get('avg_R'))})")
+        c = o.get("contest")
+        if c and c["top"]:
+            w = c["top"][0]
+            lines.append(f"Strateji yarışması kazananı: {w['name']} → TEST ort R {_f(w['test']['5'].get('avg_R'))}, kazanma %{_f(w['test']['5'].get('win'))}, PF {_f(w['test']['5'].get('pf'))} {'✅ bota uygulandı' if c['adopted'] else '❌ yetersiz'}")
     telegram.send(chat, "\n".join(lines))
 
 

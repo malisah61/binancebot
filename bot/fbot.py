@@ -62,13 +62,11 @@ def fmt(x):
 
 
 def model_for(tf):
-    m = load("model.json", {}).get("tfs", {}).get(tf)
-    if not m:
-        return {k: v5.WEIGHTS[k] for k in LIVE_COMPS}, 58, 42.99, False
-    w = {k: v for k, v in m["weights"].items() if k in LIVE_COMPS and v}
-    if not w:
-        w = {k: v5.WEIGHTS[k] for k in LIVE_COMPS}
-    return w, m["long_th"], m["short_th"], m.get("learned", False)
+    """Canlı ağırlıklar + strateji (araştırmanın TEST'te doğruladığı; yoksa varsayılan trend)."""
+    m = load("model.json", {}).get("tfs", {}).get(tf) or {}
+    w = {k: v for k, v in (m.get("live_weights") or {}).items() if k in LIVE_COMPS and v} or {k: v5.WEIGHTS[k] for k in LIVE_COMPS}
+    st = dict(v5.DEFAULT_STRATEGY, **(m.get("strategy") or {}))
+    return w, st, m.get("strategy_name") or v5.strategy_name(st), bool(m.get("strategy_adopted"))
 
 
 def score_with(R, w):
@@ -129,7 +127,7 @@ def close_pos(acc, p, reason, ret, lev, tf, msgs):
     roe = (-1.0 - lev * CFG["fee"]) if reason == "LİKİDASYON" else lev * ret - fees
     pnl = p["margin"] * roe
     acc["equity"] += pnl
-    risk = 1.5 * p["atr"] / p["entry"]
+    risk = abs(p["entry"] - p["sl"]) / p["entry"]
     acc["closed"].append({"sym": p["sym"], "dir": p["dir"], "entry": p["entry"], "opened": p["opened"], "closed": now_ms(),
                           "reason": reason, "roe": round(roe * 100, 2), "pnl": round(pnl, 2), "R": round(ret / risk, 2),
                           "score": p["score"], "snap": p.get("snap")})
@@ -161,7 +159,8 @@ def manage(state, k15s, msgs):
         acc["positions"] = keep
 
 
-def open_pos(acc, sym, d, row, tf, lev, score, snap, msgs):
+def open_pos(acc, sym, d, row, tf, lev, score, snap, msgs, st=None):
+    st = st or v5.DEFAULT_STRATEGY
     e, A = float(row["c"]), float(row["atr"])
     if not np.isfinite(A) or A <= 0:
         return
@@ -169,9 +168,9 @@ def open_pos(acc, sym, d, row, tf, lev, score, snap, msgs):
     if margin < 5:
         return
     liq = e * (1 - d * (1 / lev - CFG["mmr"]))
-    sl = e - d * 1.5 * A
+    sl = e - d * st["sl"] * A
     stop_is_liq = d * (liq - sl) > 0
-    p = {"sym": sym, "dir": d, "entry": e, "atr": A, "sl": sl, "tp1": e + d * 1.5 * A, "tp2": e + d * 3 * A,
+    p = {"sym": sym, "dir": d, "entry": e, "atr": A, "sl": sl, "tp1": e + d * st["tp1"] * A, "tp2": e + d * st["tp2"] * A, "strategy": st.get("type"),
          "stop": liq if stop_is_liq else sl, "stop_is_liq": bool(stop_is_liq), "liq": liq, "tp1_done": False, "realized": 0.0,
          "margin": round(margin, 2), "opened": int(row["t"]) + v5.TF_MS[tf], "checked": int(row["t"]) + v5.TF_MS[tf],
          "until": int(row["t"]) + v5.TF_MS[tf] * (1 + CFG["max_hold"][tf]), "score": float(score), "snap": snap}
@@ -265,7 +264,7 @@ def main():
 
     latest = {}
     for tf in TFS:
-        w, lt, st, learned = model_for(tf)
+        w, st, st_name, adopted = model_for(tf)
         rows = []
         for s, (frames, _) in data.items():
             df = frames[tf]
@@ -275,26 +274,32 @@ def main():
             sc = score_with(R, w)
             if not np.isfinite(sc[-1]):
                 continue
-            rows.append((s, float(sc[-1]), R.iloc[-1], int(df["t"].iloc[-1]), {k: (round(float(R[k].iloc[-1]), 2) if np.isfinite(R[k].iloc[-1]) else None) for k in LIVE_COMPS}))
-        latest[tf] = [(s, sc) for s, sc, *_ in rows]
+            d, strength = v5.signals(R, sc, st)
+            snap = {k: (round(float(R[k].iloc[-1]), 2) if np.isfinite(R[k].iloc[-1]) else None) for k in LIVE_COMPS}
+            for f in ("f_z", "f_rsi", "f_htf", "f_vwap_atr", "f_rvol", "f_ssl3", "f_bsl3"):
+                val = R[f].iloc[-1]
+                snap[f] = round(float(val), 2) if np.isfinite(val) else None
+            rows.append((s, float(sc[-1]), R.iloc[-1], int(df["t"].iloc[-1]), snap, int(d[-1]), float(strength[-1])))
+        latest[tf] = [(r[0], r[1]) for r in rows]
         if not rows:
             continue
         bar_t = max(r[3] for r in rows)
         if state["last_bar"].get(tf) == bar_t:
             continue  # bu periyotta yeni mum kapanmadı
         state["last_bar"][tf] = bar_t
-        cands = [r for r in rows if r[3] == bar_t and (r[1] >= lt or r[1] <= st)]
-        cands.sort(key=lambda r: -abs(r[1] - 50))
+        cands = sorted([r for r in rows if r[3] == bar_t and r[5] != 0], key=lambda r: -r[6])
+        cands = cands[:st.get("max_new", 99)]  # aynı anda çok sayıda aynı yönlü işlem = tek büyük bahis; sınırla
         for lev in LEVS:
             acc = state["accounts"][f"{tf}_{lev}x"]
             busy = {p["sym"] for p in acc["positions"]}
-            for s, sc, row, _, snap in cands:
+            for s, sc, row, _, snap, d, _ in cands:
                 if len(acc["positions"]) >= CFG["max_pos"]:
                     break
                 if s in busy:
                     continue
-                open_pos(acc, s, 1 if sc >= lt else -1, row, tf, lev, sc, snap, msgs)
+                open_pos(acc, s, d, row, tf, lev, sc, snap, msgs, st)
                 busy.add(s)
+        state.setdefault("strategy", {})[tf] = st_name
 
     handle_commands(state, px, latest)
 

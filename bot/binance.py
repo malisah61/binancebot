@@ -6,7 +6,10 @@ import requests
 # data-api.binance.vision herkese açık piyasa verisi için Binance'in resmi aynasıdır.
 HOSTS = ["https://data-api.binance.vision", "https://api.binance.com", "https://api1.binance.com"]
 STABLE = {"USDC", "FDUSD", "TUSD", "BUSD", "DAI", "USDP", "EUR", "EURI", "AEUR", "USDE", "XUSD",
-          "PAXG", "WBTC", "WBETH", "BFUSD", "USD1", "TRY", "BRL", "GBP"}
+          "PAXG", "WBTC", "WBETH", "BFUSD", "USD1", "TRY", "BRL", "GBP", "XAUT", "RLUSD", "PYUSD", "USDS"}
+# Kripto olmayan varlıklar (tokenize hisse/emtia) — farklı piyasa saatleri ve dinamikleri var
+NON_CRYPTO = {"MSTRB", "SPCXB", "TSLAB", "NVDAB", "AAPLB", "COINB", "HOODB", "AMZNB", "GOOGLB", "METAB", "MSFTB",
+              "CRCLB", "SPYB", "QQQB", "XAU", "XAG"}
 _session = requests.Session()
 
 
@@ -37,7 +40,7 @@ def top_usdt(n=100):
         if not s.endswith("USDT"):
             continue
         base = s[:-4]
-        if base in STABLE or base.endswith(("UP", "DOWN", "BULL", "BEAR")):
+        if base in STABLE or base in NON_CRYPTO or base.endswith(("UP", "DOWN", "BULL", "BEAR")):
             continue
         if float(x["quoteVolume"]) <= 0 or int(x.get("count", 0)) == 0:
             continue

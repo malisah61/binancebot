@@ -33,7 +33,7 @@ def funding_marks(t, tf_ms, funding):
     return np.where(has, f, 0.0)
 
 
-def simulate(t, h, l, c, atr, direction, lev, tf_ms, fmark=None, max_hold=100, start=0, snap=None):
+def simulate(t, h, l, c, atr, direction, lev, tf_ms, fmark=None, max_hold=100, start=0, snap=None, sl_m=1.5, tp1_m=1.5, tp2_m=3.0):
     """direction: her mum için +1 (long sinyali), -1 (short), 0. Bir coinde aynı anda tek pozisyon.
     Dönen: işlem listesi (dict)."""
     n = len(c)
@@ -52,7 +52,7 @@ def simulate(t, h, l, c, atr, direction, lev, tf_ms, fmark=None, max_hold=100, s
             continue
         d = int(direction[i])
         e, A = c[i], atr[i]
-        sl, tp1, tp2 = e - d * 1.5 * A, e + d * 1.5 * A, e + d * 3 * A
+        sl, tp1, tp2 = e - d * sl_m * A, e + d * tp1_m * A, e + d * tp2_m * A
         liq = e * (1 - d * liq_dist)
         stop_is_liq = d * (liq - sl) > 0
         stop = liq if stop_is_liq else sl
@@ -102,7 +102,7 @@ def simulate(t, h, l, c, atr, direction, lev, tf_ms, fmark=None, max_hold=100, s
             fund -= d * lev * rem * fmark[a + prev:a + end + 1].sum()
             prev = end + 1
         roe = -1.0 + fund - lev * FEE if liq_hit else lev * pnl - fees + fund
-        risk = 1.5 * A / e
+        risk = sl_m * A / e
         tr = {"i": int(i), "j": int(a + j), "dir": d, "entry": float(e), "reason": reason, "bars": int(j + 1),
               "ret": float(pnl), "R": float(pnl / risk) if not liq_hit else float(-liq_dist / risk),
               "roe": float(max(roe, -1.0 - lev * FEE)), "liq": liq_hit, "t": int(t[i]), "t_exit": int(t[a + j])}

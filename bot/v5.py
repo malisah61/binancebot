@@ -193,6 +193,9 @@ def compute(df: pd.DataFrame, tf: str, weights: dict | None = None) -> pd.DataFr
     fvg, nb, nr = _fvg_component(o.values, h.values, l.values, c.values, atr.values)
     R["smc"] = clip(sweep + fvg)
     R["f_sweep"] = np.sign(sweep)
+    R["f_ssl1"], R["f_bsl1"] = ssl, bsl          # bu mumda likidite avı
+    R["f_ssl3"] = ssl.rolling(3, min_periods=1).sum()
+    R["f_bsl3"] = bsl.rolling(3, min_periods=1).sum()
     R["f_fvg"] = np.where(nb & ~nr, 1, np.where(nr & ~nb, -1, 0))
 
     # ---- VWAP (~24 saat)
@@ -201,6 +204,7 @@ def compute(df: pd.DataFrame, tf: str, weights: dict | None = None) -> pd.DataFr
     vwap = (tp * v).rolling(nV, min_periods=20).sum() / v.rolling(nV, min_periods=20).sum()
     R["vwap"] = np.tanh((c - vwap) / atr / 2)
     R["f_vwap"] = np.sign(c - vwap)
+    R["f_vwap_atr"] = (c - vwap) / atr          # VWAP'tan uzaklık (ATR cinsinden)
 
     # ---- SKOR
     keys = list(WEIGHTS)
@@ -213,3 +217,52 @@ def compute(df: pd.DataFrame, tf: str, weights: dict | None = None) -> pd.DataFr
     R["decision"] = decision(R["score"].fillna(50))
     R.loc[R.index[:210], "score"] = np.nan  # ısınma (EMA200)
     return R
+
+
+# ---------------------------------------------------------------- stratejiler
+# Ortak strateji tanımı (araştırma, canlı bot ve uygulama aynı kuralı kullanır)
+DEFAULT_STRATEGY = {"type": "trend", "lt": 58, "st": 42.99, "max_ext": None, "htf": False,
+                    "sl": 1.5, "tp1": 1.5, "tp2": 3.0, "max_new": 99}
+
+
+def signals(R, score, st):
+    """Her mum için +1 / -1 / 0 ve sinyal gücü."""
+    typ = st.get("type", "trend")
+    z = R["f_z"].values.astype(float)
+    rsi = R["f_rsi"].values.astype(float)
+    htf = np.nan_to_num(R["f_htf"].values.astype(float))
+    ext = np.nan_to_num(R["f_vwap_atr"].values.astype(float))
+    sc = np.nan_to_num(np.asarray(score, float), nan=50)
+    valid = ~np.isnan(np.asarray(score, float))
+    if typ == "trend":
+        d = np.where(sc >= st["lt"], 1, np.where(sc <= st["st"], -1, 0))
+        if st.get("max_ext") is not None:
+            d = np.where(np.abs(ext) > st["max_ext"], 0, d)  # aşırı uzamış fiyatı kovalama
+        strength = np.abs(sc - 50)
+    elif typ == "meanrev":
+        zt, hi, lo = st["z"], st["rsi_hi"], st["rsi_lo"]
+        d = np.where((z <= -zt) & (rsi <= lo), 1, np.where((z >= zt) & (rsi >= hi), -1, 0))
+        if st.get("need_sweep"):
+            d = np.where((d > 0) & (R["f_ssl3"].values > 0), 1, np.where((d < 0) & (R["f_bsl3"].values > 0), -1, 0))
+        strength = np.nan_to_num(np.abs(z))
+    else:  # sweep
+        d = np.where(R["f_ssl1"].values > 0, 1, np.where(R["f_bsl1"].values > 0, -1, 0))
+        strength = np.nan_to_num(np.abs(ext))
+    if st.get("htf") == "with":
+        d = np.where(d * np.sign(htf) > 0, d, 0)
+    elif st.get("htf") == "against":
+        d = np.where(d * np.sign(htf) < 0, d, 0)
+    d = np.where(valid & np.isfinite(z), d, 0)
+    return d.astype(int), strength
+
+
+def strategy_name(st):
+    t = st.get("type")
+    ex = f"SL{st['sl']}/TP{st['tp1']}-{st['tp2']}"
+    h = {"with": " +üst trend yönünde", "against": " +üst trende karşı"}.get(st.get("htf"), "")
+    if t == "trend":
+        e = f", VWAP'tan ≤{st['max_ext']} ATR" if st.get("max_ext") is not None else ""
+        return f"Trend takibi (skor ≥{st['lt']} / ≤{round(st['st'])}{e}){h}, {ex}"
+    if t == "meanrev":
+        return f"Ortalamaya dönüş (|Z|≥{st['z']}, RSI {st['rsi_lo']}/{st['rsi_hi']}{', likidite avı şart' if st.get('need_sweep') else ''}){h}, {ex}"
+    return f"Likidite avı tersine dönüş{h}, {ex}"

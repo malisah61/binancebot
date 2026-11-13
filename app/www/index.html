@@ -47,7 +47,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:5px 4px;b
     <input id="q" placeholder="Ara: BTC" style="flex:1;min-width:70px">
     <button class="pri" id="scanBtn">Tara</button>
   </div>
-  <div class="chips" id="filt"><span class="chip on" data-f="all">Tümü</span><span class="chip" data-f="long">🟢 Long</span><span class="chip" data-f="short">🔴 Short</span><span class="chip" data-f="rvol">🔥 Hacim</span><span class="chip" data-f="sweep">🎯 Likidite avı</span><span class="chip" data-f="squeeze">⚡ Squeeze</span></div>
+  <div class="chips" id="filt"><span class="chip on" data-f="all">Tümü</span><span class="chip" data-f="long">🟢 Long</span><span class="chip" data-f="short">🔴 Short</span><span class="chip" data-f="rvol">🔥 Hacim</span><span class="chip" data-f="sweep">🎯 Likidite avı</span><span class="chip" data-f="squeeze">⚡ Squeeze</span><span class="chip" data-f="bot">🤖 Bot sinyali</span></div>
   <div class="prog" id="prog"></div>
 </header>
 
@@ -130,6 +130,22 @@ async function loadModel() { try { const r = await fetch(`https://raw.githubuser
 try { S.model = JSON.parse(localStorage.getItem("model5") || "null"); } catch (e) {}
 loadModel();
 
+// Botun araştırmada doğrulanmış stratejisi: bu coinde şimdi işlem açar mıydı?
+const LIVE_W = {trend: 20, momentum: 18, volume: 10, smc: 10, vwap: 5};
+function botStrategy(tf) { const m = S.model && S.model.tfs && S.model.tfs[tf]; return m && m.strategy ? {st: m.strategy, name: m.strategy_name, adopted: m.strategy_adopted, test: m.strategy_test, w: m.live_weights || LIVE_W} : {st: {type: "trend", lt: 58, st: 42.99, sl: 1.5, tp1: 1.5, tp2: 3}, name: "Varsayılan trend takibi", adopted: false, w: LIVE_W}; }
+function botSignal(m, comps, tf) {
+  const B = botStrategy(tf), st = B.st; let tw = 0, ts = 0;
+  for (const [k, w] of Object.entries(B.w)) if (comps[k] !== undefined && w) { tw += Math.abs(w); ts += w * comps[k]; }
+  const score = 50 + 50 * ts / (tw || 1); let dir = 0, why = "", strength = 0;
+  const ssl3 = (m.sw || []).some((x) => x.type === "SSL"), bsl3 = (m.sw || []).some((x) => x.type === "BSL"), ssl1 = (m.sw || []).some((x) => x.type === "SSL" && x.ago === 0), bsl1 = (m.sw || []).some((x) => x.type === "BSL" && x.ago === 0);
+  if (st.type === "trend") { dir = score >= st.lt ? 1 : score <= st.st ? -1 : 0; if (dir && st.max_ext != null && Math.abs(m.ext) > st.max_ext) { why = `fiyat VWAP'tan ${Math.abs(m.ext).toFixed(1)} ATR uzak (sınır ${st.max_ext}), kovalamaz`; dir = 0; } strength = Math.abs(score - 50); if (!why) why = `canlı skor ${score.toFixed(0)} (eşik ${st.lt}/${Math.round(st.st)})`; }
+  else if (st.type === "meanrev") { dir = m.z <= -st.z && m.rsi <= st.rsi_lo ? 1 : m.z >= st.z && m.rsi >= st.rsi_hi ? -1 : 0; if (st.need_sweep) dir = dir > 0 && ssl3 ? 1 : dir < 0 && bsl3 ? -1 : 0; strength = Math.abs(m.z); why = `Z ${m.z.toFixed(2)} (eşik ±${st.z}), RSI ${m.rsi.toFixed(0)}`; }
+  else { dir = ssl1 ? 1 : bsl1 ? -1 : 0; strength = Math.abs(m.ext); why = dir ? (dir > 0 ? "bu mumda SSL likidite avı" : "bu mumda BSL likidite avı") : "bu mumda likidite avı yok"; }
+  if (dir && st.htf === "with" && !(dir * Math.sign(m.htf || 0) > 0)) { why += " · üst trend ters, bekler"; dir = 0; }
+  if (dir && st.htf === "against" && !(dir * Math.sign(m.htf || 0) < 0)) { why += " · üst trend aynı yönde, bekler"; dir = 0; }
+  return {dir, why, strength, B};
+}
+
 // ------------------------------------------------ yardımcılar
 function decCls(d) { return d === "GÜÇLÜ LONG" ? "b-sl" : d === "LONG" ? "b-l" : d === "NEUTRAL" ? "b-n" : d === "SHORT" ? "b-s" : "b-ss"; }
 function scoreCol(s) { return s >= 70 ? "var(--up)" : s >= 58 ? "#7bd88f" : s >= 43 ? "var(--mut)" : s >= 30 ? "#f08a8f" : "var(--dn)"; }
@@ -151,7 +167,8 @@ async function scan() {
             const a = TA.analyze(k, {htfMs: TFMS[tf] * 4, tfMs: TFMS[tf], oi, gls, funding: perp ? S.perps[s] : null, ...modelOpt(tf)});
             series[s] = k; const m = a.metrics;
             res.push({symbol: s, perp, qv24: vol[s], price: a.price, score: a.score, decision: a.decision, change: a.change, agreement: a.agreement, plan: a.plan,
-              m: {rsi: m.rsi, rvol: m.rvol, taker: m.taker, z: m.z, funding: m.funding, oiChg: m.oiChg, regime: m.regime, gls: m.gls, sweeps: m.sweeps.map((x) => x.type)}});
+              m: {rsi: m.rsi, rvol: m.rvol, taker: m.taker, z: m.z, funding: m.funding, oiChg: m.oiChg, regime: m.regime, gls: m.gls, sweeps: m.sweeps.map((x) => x.type), sw: m.sweeps.map((x) => ({type: x.type, ago: x.ago})), htf: m.htf, ext: (a.price - m.vwap) / (m.atr || 1)},
+              comps: Object.fromEntries(a.components.map((c) => [c.key, c.score]))});
             recordSignal(a, s, tf, perp);
           }
         } catch (e) { console.log(s, e.message); }
@@ -174,6 +191,7 @@ function render() {
   else if (f === "rvol") r = r.filter((a) => a.m.rvol > 1.8).sort((a, b) => b.m.rvol - a.m.rvol);
   else if (f === "sweep") r = r.filter((a) => a.m.sweeps.length);
   else if (f === "squeeze") r = r.filter((a) => a.m.regime === "Short Squeeze" || (a.m.funding < -0.01));
+  else if (f === "bot") r = r.map((a) => ({a, s: botSignal(a.m, a.comps, S.tf)})).filter((x) => x.s.dir).sort((x, y) => y.s.strength - x.s.strength).map((x) => x.a);
   else r = r.sort((a, b) => b.score - a.score);
   if (!S.results.length) return;
   if (!r.length) { $("list").innerHTML = '<div class="warn">Bu filtreye uyan coin yok.</div>'; return; }
@@ -224,6 +242,8 @@ async function loadDetail(sym, seq) {
   const bk = book ? {bids: book.bids.map((x) => [+x[0], +x[1]]), asks: book.asks.map((x) => [+x[0], +x[1]])} : null;
   const trades = tr ? tr.map((x) => ({p: +x.p, q: +x.q, m: x.m, T: x.T})) : null;
   const a = TA.analyze(k, {htfMs: TFMS[tf] * 4, tfMs: TFMS[tf], oi, gls, tls, funding: perp ? S.perps[sym] : null, book: bk, trades, ...modelOpt(tf)});
+  { const B = botStrategy(tf); const st = B.st, A = a.metrics.atr, d = a.plan.dir, e = a.price; const m = B.adopted ? [st.sl, st.tp1, st.tp2] : [1.5, 1.5, 3];
+    a.plan = {...a.plan, sl: e - d * m[0] * A, tp1: e + d * m[1] * A, tp2: e + d * m[2] * A, m}; }
   a.symbol = sym; a.tf = tf; a.perp = perp; a.live = S.det && S.det.symbol === sym ? S.det.live : null;
   S.det = a; recordSignal(a, sym, tf, perp); renderDetail();
 }
@@ -324,6 +344,14 @@ function features(a) {
       `Dalga: ${fmt(fib.low)} → ${fmt(fib.high)}. ${fib.up ? "Yükseliş sonrası 0.5–0.618 geri çekilmesi (" + fmt(fib.levels[0.618]) + "–" + fmt(fib.levels[0.5]) + ") en çok takip edilen alım bölgesidir." : "Düşüş sonrası 0.5–0.618 tepkisi (" + fmt(fib.levels[0.5]) + "–" + fmt(fib.levels[0.618]) + ") en çok takip edilen satış bölgesidir."}`)]});
   return F;
 }
+function botCard(a) {
+  const m = a.metrics; const comps = Object.fromEntries(a.components.map((c) => [c.key, c.score]));
+  const sg = botSignal({z: m.z, rsi: m.rsi, htf: m.htf, ext: (a.price - m.vwap) / (m.atr || 1), sw: m.sweeps}, comps, a.tf); const B = sg.B; const t = B.test && B.test["5"];
+  return `<div class="card"><h3>🤖 Botun stratejisi (${a.tf})</h3><div><b>${B.name}</b></div>
+    <div class="mut sm" style="margin-top:3px">${B.adopted ? `✅ Geçmiş veride, modelin görmediği dönemde doğrulandı${t ? `: ${t.n} işlem, kazanma %${t.win}, ort. R ${t.avg_R}, PF ${t.pf}` : ""}` : "⚠️ Henüz doğrulanmış bir strateji yok; varsayılan kural kullanılıyor"}</div>
+    <div class="row between" style="margin-top:8px"><span>Bu coinde şimdi:</span>${sg.dir > 0 ? '<span class="badge b-sl">LONG AÇAR</span>' : sg.dir < 0 ? '<span class="badge b-ss">SHORT AÇAR</span>' : '<span class="badge b-n">İŞLEM YOK</span>'}</div>
+    <div class="mut sm">${sg.why}</div></div>`;
+}
 function renderDetail() {
   const a = S.det; const P = a.plan, isL = P.dir > 0;
   const pctOf = (x) => pct(x / P.entry - 1);
@@ -340,10 +368,11 @@ function renderDetail() {
   </div>
   <div class="card"><h3>🎯 ATR işlem planı (${isL ? '<span class="up">LONG</span>' : '<span class="dn">SHORT</span>'})</h3>
     <div class="kv"><div><span>Giriş</span><b>${fmt(P.entry)}</b></div><div><span>ATR(14)</span><b>${fmt(a.metrics.atr)}</b></div>
-    <div><span class="dn">SL (1.5×ATR)</span><b>${fmt(P.sl)} <small class="dn">${pctOf(P.sl)}</small></b></div><div><span>Risk</span><b>1R</b></div>
-    <div><span class="up">TP1 (1.5×ATR)</span><b>${fmt(P.tp1)} <small class="up">${pctOf(P.tp1)}</small></b></div><div><span>R/Ö</span><b>1 : 1</b></div>
-    <div><span class="up">TP2 (3×ATR)</span><b>${fmt(P.tp2)} <small class="up">${pctOf(P.tp2)}</small></b></div><div><span>R/Ö</span><b>1 : 2</b></div></div>
+    <div><span class="dn">SL (${P.m[0]}×ATR)</span><b>${fmt(P.sl)} <small class="dn">${pctOf(P.sl)}</small></b></div><div><span>Risk</span><b>1R</b></div>
+    <div><span class="up">TP1 (${P.m[1]}×ATR)</span><b>${fmt(P.tp1)} <small class="up">${pctOf(P.tp1)}</small></b></div><div><span>R/Ö</span><b>1 : ${(P.m[1] / P.m[0]).toFixed(1)}</b></div>
+    <div><span class="up">TP2 (${P.m[2]}×ATR)</span><b>${fmt(P.tp2)} <small class="up">${pctOf(P.tp2)}</small></b></div><div><span>R/Ö</span><b>1 : ${(P.m[2] / P.m[0]).toFixed(1)}</b></div></div>
     <div class="mut sm" style="margin-top:6px">${a.decision === "NEUTRAL" ? "Karar NEUTRAL: plan sadece bilgi amaçlı, işlem sinyali yok." : "TP1'de yarısını kapat, stop'u girişe çek; kalanı TP2'ye bırak."}</div></div>
+  ${botCard(a)}
   ${opp}
   <div class="card"><h3>📋 Kararı tetikleyen koşullar</h3>${a.triggers.length ? a.triggers.map((t) => `<div class="trig"><span>${t.dir > 0 ? "🟢" : t.dir < 0 ? "🔴" : "🟡"}</span><span>${t.text}</span></div>`).join("") : '<div class="mut">Belirgin bir tetikleyici yok; piyasa kararsız.</div>'}</div>
   <div class="card"><h3>⚖️ Ağırlıklı skor bileşenleri</h3>${a.components.map((c) => { const w = Math.abs(c.score) * 50, col = c.score > 0.1 ? "var(--up)" : c.score < -0.1 ? "var(--dn)" : "var(--mut)";

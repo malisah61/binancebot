@@ -1,0 +1,23 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.malisah.kriptoanaliz'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'com.malisah.kriptoanaliz'
+        minSdk 23
+        targetSdk 34
+        versionCode (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
+        versionName "1.0." + (System.getenv('GITHUB_RUN_NUMBER') ?: '0')
+    }
+    // Sabit imza: güncellemeler eski sürümün üstüne kurulur (kaldırmaya gerek kalmaz)
+    signingConfigs {
+        sabit { storeFile file('kripto.keystore'); storePassword 'kripto123'; keyAlias 'kripto'; keyPassword 'kripto123' }
+    }
+    buildTypes {
+        release { minifyEnabled false; signingConfig signingConfigs.sabit }
+        debug { signingConfig signingConfigs.sabit }
+    }
+    // Web uygulaması doğrudan app/www klasöründen alınır
+    sourceSets { main { assets.srcDirs = ['../../app'] } }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}

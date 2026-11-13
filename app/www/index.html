@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f14">
+<title>Kripto Analiz</title>
+<style>
+:root{--bg:#0b0f14;--card:#131a22;--line:#212b36;--tx:#e6edf3;--mut:#8b98a5;--up:#16c784;--dn:#ea3943;--gold:#f0b90b;--blue:#4c9aff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.4 system-ui,-apple-system,Roboto,sans-serif;padding-bottom:64px}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 12px 6px;border-bottom:1px solid var(--line)}
+h1{font-size:17px;margin:0;display:flex;align-items:center;gap:8px}h1 b{color:var(--gold)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+select,input,button{background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit}
+button{cursor:pointer}button.pri{background:var(--gold);color:#000;border:0;font-weight:600}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px}.chip{white-space:nowrap;padding:5px 10px;border-radius:99px;border:1px solid var(--line);color:var(--mut);font-size:13px}.chip.on{border-color:var(--gold);color:var(--gold)}
+main{padding:10px 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.card h3{margin:0 0 8px;font-size:14px;color:var(--mut);font-weight:600}
+.coin{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.coin .s{font-weight:600}.coin .p{text-align:right}.coin .m{color:var(--mut);font-size:12px}
+.bar{height:6px;border-radius:3px;background:#1d2630;overflow:hidden;margin-top:4px}.bar i{display:block;height:100%}
+.up{color:var(--up)}.dn{color:var(--dn)}.mut{color:var(--mut)}.gold{color:var(--gold)}
+.score{font-size:34px;font-weight:700}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}.kv div{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:3px 0}
+.comp{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}.dot{width:10px;height:10px;border-radius:50%;margin-top:5px;flex:none}
+canvas{width:100%;display:block}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#0e141b;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;border-radius:0;background:none;padding:12px 0;color:var(--mut)}nav button.on{color:var(--gold)}
+.hide{display:none}.prog{height:3px;background:var(--gold);width:0;transition:width .2s}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:5px 4px;border-bottom:1px solid var(--line);text-align:right}td:first-child,th:first-child{text-align:left}
+.warn{font-size:12px;color:var(--mut);padding:8px 4px}
+.tag{font-size:11px;padding:2px 6px;border-radius:4px;background:#1d2630;color:var(--mut)}
+</style>
+</head>
+<body>
+<header>
+  <h1>📊 Kripto <b>Analiz</b><span id="hdrInfo" class="mut" style="font-size:12px;font-weight:400;margin-left:auto"></span></h1>
+  <div id="scanCtl" class="row" style="margin-top:8px">
+    <select id="tf"><option value="15m">15 dk</option><option value="1h" selected>1 saat</option><option value="4h">4 saat</option><option value="1d">1 gün</option></select>
+    <input id="q" placeholder="Ara: BTC" style="flex:1;min-width:80px">
+    <button class="pri" id="scanBtn">Tara</button>
+  </div>
+  <div class="chips" id="filt"><span class="chip on" data-f="all">Tümü</span><span class="chip" data-f="up">📈 Yükseliş</span><span class="chip" data-f="dn">📉 Düşüş</span><span class="chip" data-f="vol">🔥 Hacim patlaması</span><span class="chip" data-f="buy">🐋 Alıcı baskısı</span></div>
+  <div class="prog" id="prog"></div>
+</header>
+
+<main>
+  <section id="pScan">
+    <div id="list"><div class="warn">"Tara"ya bas: Binance'te hacimce ilk 100 USDT çifti 16 göstergeyle puanlanır.</div></div>
+  </section>
+
+  <section id="pDetail" class="hide">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div><div id="dSym" style="font-size:20px;font-weight:700"></div><div id="dPrice" class="mut"></div></div>
+        <div style="text-align:right"><div id="dScore" class="score"></div><div id="dLabel"></div></div>
+      </div>
+      <div class="bar" style="height:8px"><i id="dBar"></i></div>
+      <div class="row" style="margin-top:8px;justify-content:space-between">
+        <span class="mut" id="dAgree"></span>
+        <span class="row"><button data-z="60">60</button><button data-z="120">120</button><button data-z="240">240</button><button id="dRef">⟳</button></span>
+      </div>
+    </div>
+    <div class="card" style="padding:6px">
+      <canvas id="cMain" height="340"></canvas>
+      <canvas id="cMacd" height="90"></canvas>
+      <canvas id="cRsi" height="80"></canvas>
+      <div class="warn"><span class="up">━</span> destek <span class="dn">━</span> direnç <span class="gold">┅</span> Fibonacci <span style="color:#b48cff">━</span> POC (en yoğun hacim) · EMA20 <span style="color:#4c9aff">━</span> EMA50 <span style="color:#f0b90b">━</span> EMA200 <span style="color:#e6edf3">━</span></div>
+    </div>
+    <div class="card"><h3>İşlem planı (ATR tabanlı)</h3><div class="kv" id="dPlan"></div></div>
+    <div class="card"><h3>Göstergeler</h3><div id="dComp"></div></div>
+    <div class="card"><h3>Destek / Direnç</h3><table id="dSR"></table></div>
+    <div class="card"><h3>Fibonacci</h3><table id="dFib"></table></div>
+    <div class="card"><h3>Emir defteri ve büyük işlemler</h3><div id="dFlow"></div></div>
+  </section>
+
+  <section id="pBot" class="hide">
+    <div class="card"><h3>Simülasyon botu (GitHub)</h3><div id="bSum" class="mut">Yükleniyor…</div><canvas id="cEq" height="160"></canvas></div>
+    <div class="card"><h3>Açık pozisyonlar</h3><div id="bPos"></div></div>
+    <div class="card"><h3>Kapanan işlemler</h3><div id="bClosed"></div></div>
+    <div class="card"><h3>Ayarlar</h3>
+      <div class="row"><span class="mut">GitHub repo:</span><input id="repo" style="flex:1" value="malisah61/binancebot"><button id="repoSave">Kaydet</button></div>
+    </div>
+  </section>
+  <div class="warn">⚠️ Bu uygulama göstergelerin ortak yönünü ölçer; kesin tahmin veya yatırım tavsiyesi değildir. Kripto çok oynaktır, kaybetmeyi göze alamayacağın parayla işlem yapma.</div>
+</main>
+
+<nav><button data-p="pScan" class="on">🔍 Tarama</button><button data-p="pDetail">📈 Detay</button><button data-p="pBot">🤖 Bot</button></nav>
+
+<script src="analysis.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const {fmt, money} = TA;
+const HOSTS = ["https://api.binance.com", "https://data-api.binance.vision", "https://api1.binance.com", "https://api2.binance.com"];
+let hostIx = 0;
+const STABLE = new Set("USDC FDUSD TUSD BUSD DAI USDP EUR EURI AEUR USDE XUSD PAXG WBTC WBETH BFUSD USD1 TRY BRL GBP".split(" "));
+const TFMS = {"15m": 9e5, "1h": 36e5, "4h": 144e5, "1d": 864e5};
+let results = [], filter = "all", cur = null, zoom = 120;
+
+async function api(path) {
+  let err;
+  for (let n = 0; n < HOSTS.length; n++) {
+    const h = HOSTS[(hostIx + n) % HOSTS.length];
+    try {
+      const r = await fetch(h + path);
+      if (r.ok) { hostIx = (hostIx + n) % HOSTS.length; return r.json(); }
+      if (r.status === 429 || r.status === 418) { await new Promise(s => setTimeout(s, 3000)); n--; continue; }
+      err = h + " " + r.status;
+    } catch (e) { err = e.message; }
+  }
+  throw new Error("Binance'e ulaşılamadı: " + err);
+}
+async function klines(sym, tf, limit = 1000) {
+  const raw = await api(`/api/v3/klines?symbol=${sym}&interval=${tf}&limit=${limit}`);
+  return raw.map(r => ({t: +r[0], o: +r[1], h: +r[2], l: +r[3], c: +r[4], v: +r[5], qv: +r[7], tb: +r[9], tq: +r[10]}));
+}
+async function topUsdt(n = 100) {
+  const t = await api("/api/v3/ticker/24hr");
+  return t.filter(x => x.symbol.endsWith("USDT") && !STABLE.has(x.symbol.slice(0, -4)) && !/(UP|DOWN|BULL|BEAR)USDT$/.test(x.symbol) && +x.quoteVolume > 0 && +x.count > 0)
+    .sort((a, b) => b.quoteVolume - a.quoteVolume).slice(0, n);
+}
+
+// ------------------------------------------------ tarama
+async function scan() {
+  const tf = $("tf").value; $("scanBtn").disabled = true; $("list").innerHTML = '<div class="warn">Coin listesi alınıyor…</div>';
+  try {
+    const tick = await topUsdt(100); const vol = Object.fromEntries(tick.map(t => [t.symbol, +t.quoteVolume]));
+    const syms = tick.map(t => t.symbol); results = []; let done = 0;
+    const worker = async () => { while (syms.length) { const s = syms.shift(); try { const k = await klines(s, tf); if (k.length >= 120) { const a = TA.analyze(k, null, null, TFMS[tf] * 4); delete a.series; delete a.profile; a.symbol = s; a.qv24 = vol[s]; results.push(a); } } catch (e) { console.log(s, e); } done++; $("prog").style.width = done + "%"; if (done % 10 === 0) render(); } };
+    await Promise.all(Array.from({length: 8}, worker));
+    $("hdrInfo").textContent = new Date().toLocaleTimeString("tr-TR", {hour: "2-digit", minute: "2-digit"}) + " · " + tf;
+    try { localStorage.setItem("lastScan", JSON.stringify({tf, time: Date.now(), results})); } catch (e) {}
+  } catch (e) { $("list").innerHTML = `<div class="card dn">${e.message}<br><span class="mut">İnternet bağlantını kontrol et.</span></div>`; }
+  $("scanBtn").disabled = false; setTimeout(() => $("prog").style.width = 0, 600); render();
+}
+function color(s) { return s >= 65 ? "var(--up)" : s >= 55 ? "#7bd88f" : s > 45 ? "var(--mut)" : s > 35 ? "#f08a8f" : "var(--dn)"; }
+function render() {
+  const q = $("q").value.trim().toUpperCase(); let r = results.filter(a => !q || a.symbol.includes(q));
+  const vs = (a, n) => (a.components.find(c => c.name === n) || {}).score || 0;
+  if (filter === "up") r = r.filter(a => a.score >= 55).sort((a, b) => b.score - a.score);
+  else if (filter === "dn") r = r.filter(a => a.score <= 45).sort((a, b) => a.score - b.score);
+  else if (filter === "vol") r = r.filter(a => a.spike > 1.5).sort((a, b) => b.spike - a.spike);
+  else if (filter === "buy") r = r.sort((a, b) => b.taker - a.taker).slice(0, 30);
+  else r = r.sort((a, b) => b.score - a.score);
+  if (!r.length) { $("list").innerHTML = results.length ? '<div class="warn">Bu filtreye uyan coin yok.</div>' : $("list").innerHTML; return; }
+  $("list").innerHTML = r.map(a => `<div class="coin" data-s="${a.symbol}">
+    <div><span class="s">${a.symbol.replace("USDT", "")}</span><span class="mut">/USDT</span> <span class="tag">${money(a.qv24)}</span></div>
+    <div class="p">${fmt(a.price)} <span class="${a.change24 >= 0 ? "up" : "dn"}">${(a.change24 * 100).toFixed(1)}%</span></div>
+    <div class="m" style="color:${color(a.score)}">${a.label}</div>
+    <div class="p" style="color:${color(a.score)};font-weight:700">${a.score}</div>
+    <div class="m" style="grid-column:1/3">RSI ${a.rsi.toFixed(0)} · ADX ${a.adx.toFixed(0)} · Alıcı %${(a.taker * 100).toFixed(0)} · Hacim x${a.spike.toFixed(1)} · Uyum %${(a.agreement * 100).toFixed(0)}
+      <div class="bar"><i style="width:${a.score}%;background:${color(a.score)}"></i></div></div></div>`).join("");
+}
+
+// ------------------------------------------------ detay
+async function openDetail(sym) {
+  show("pDetail"); cur = {symbol: sym}; $("dSym").textContent = sym; $("dPrice").textContent = "Yükleniyor…";
+  const tf = $("tf").value;
+  try {
+    const [k, book, tr] = await Promise.all([klines(sym, tf), api(`/api/v3/depth?symbol=${sym}&limit=500`), api(`/api/v3/aggTrades?symbol=${sym}&limit=1000`)]);
+    book.bids = book.bids.map(x => [+x[0], +x[1]]); book.asks = book.asks.map(x => [+x[0], +x[1]]);
+    const trades = tr.map(x => ({p: +x.p, q: +x.q, m: x.m, T: x.T}));
+    const a = TA.analyze(k, book, trades, TFMS[tf] * 4); a.symbol = sym; a.k = k; a.tf = tf; a.rawBook = book; cur = a; drawDetail();
+  } catch (e) { $("dPrice").innerHTML = `<span class="dn">${e.message}</span>`; }
+}
+function drawDetail() {
+  const a = cur; $("dPrice").innerHTML = `${fmt(a.price)} USDT · <span class="${a.change24 >= 0 ? "up" : "dn"}">${(a.change24 * 100).toFixed(2)}% (24 mum)</span> · ${a.tf}`;
+  $("dScore").textContent = a.score; $("dScore").style.color = color(a.score); $("dLabel").textContent = a.label; $("dLabel").style.color = color(a.score);
+  $("dBar").style.width = a.score + "%"; $("dBar").style.background = color(a.score);
+  $("dAgree").textContent = `Göstergelerin %${(a.agreement * 100).toFixed(0)}'i aynı yönde`;
+  const p = a.plan, pct = (x) => ((x / p.entry - 1) * 100).toFixed(2) + "%";
+  $("dPlan").innerHTML = `<div><span>Giriş</span><b>${fmt(p.entry)}</b></div><div><span>ATR</span><b>${fmt(a.atr)}</b></div>
+    <div><span class="dn">Zarar durdur</span><b>${fmt(p.stop)} <small class="dn">${pct(p.stop)}</small></b></div><div><span>Risk/Ödül</span><b>${((p.tp1 - p.entry) / (p.entry - p.stop)).toFixed(2)}</b></div>
+    <div><span class="up">Hedef 1</span><b>${fmt(p.tp1)} <small class="up">${pct(p.tp1)}</small></b></div><div><span class="up">Hedef 2</span><b>${fmt(p.tp2)} <small class="up">${pct(p.tp2)}</small></b></div>`;
+  $("dComp").innerHTML = a.components.map(c => `<div class="comp"><span class="dot" style="background:${c.score > 0.1 ? "var(--up)" : c.score < -0.1 ? "var(--dn)" : "var(--mut)"}"></span>
+    <div style="flex:1"><b>${c.name}</b> <span class="mut" style="font-size:12px">ağırlık ${c.weight}</span><div class="mut" style="font-size:13px">${c.text}</div></div>
+    <b style="color:${c.score > 0.1 ? "var(--up)" : c.score < -0.1 ? "var(--dn)" : "var(--mut)"}">${c.score > 0 ? "+" : ""}${c.score.toFixed(2)}</b></div>`).join("");
+  const srRow = (x, cls) => `<tr><td class="${cls}">${fmt(x.price)}</td><td>${((x.price / a.price - 1) * 100).toFixed(2)}%</td><td>${x.src === "hacim" ? "hacim düğümü" : x.touches + " temas"}</td></tr>`;
+  $("dSR").innerHTML = `<tr><th>Seviye</th><th>Uzaklık</th><th>Kaynak</th></tr>` + a.resistances.slice().reverse().map(x => srRow(x, "dn")).join("") +
+    `<tr><td class="gold"><b>${fmt(a.price)}</b></td><td>şimdi</td><td>POC ${fmt(a.poc)}</td></tr>` + a.supports.map(x => srRow(x, "up")).join("");
+  const fb = a.fib; $("dFib").innerHTML = `<tr><th>Oran</th><th>Fiyat</th><th>Uzaklık</th></tr>` + Object.entries(fb.levels).sort((x, y) => y[1] - x[1]).map(([r, v]) =>
+    `<tr><td class="${["0.5", "0.618"].includes(r) ? "gold" : ""}">${r}</td><td>${fmt(v)}</td><td>${((v / a.price - 1) * 100).toFixed(2)}%</td></tr>`).join("") +
+    `<tr><td colspan="3" class="mut" style="text-align:left">${fb.up ? "Yükseliş dalgası (dip→tepe) geri çekilme" : "Düşüş dalgası (tepe→dip) tepki"} · Tepe ${fmt(fb.high)} · Dip ${fmt(fb.low)}</td></tr>`;
+  const b = a.book, w = a.whales; let html = "";
+  if (b) { const bp = b.bid / (b.bid + b.ask) * 100; html += `<div class="row" style="justify-content:space-between"><span class="up">Alış ${money(b.bid)}</span><span class="dn">Satış ${money(b.ask)}</span></div>
+    <div class="bar" style="height:10px;background:var(--dn)"><i style="width:${bp}%;background:var(--up)"></i></div><div class="mut" style="font-size:12px;margin-bottom:8px">Fiyatın ±%2'si içindeki bekleyen emirler</div>`;
+    const walls = (arr) => arr.slice().sort((x, y) => y[0] * y[1] - x[0] * x[1]).slice(0, 3).map(x => `${fmt(x[0])} (${money(x[0] * x[1])})`).join(", ");
+    html += `<div class="mut" style="font-size:13px">En büyük alış duvarları: <span class="up">${walls(a.rawBook.bids)}</span><br>En büyük satış duvarları: <span class="dn">${walls(a.rawBook.asks)}</span></div>`; }
+  if (w) { html += `<div style="margin-top:10px"><b>Büyük işlemler</b> <span class="mut">(son 1000 işlemde ≥ ${money(w.thr)})</span></div><div class="row" style="justify-content:space-between"><span class="up">Alım ${money(w.buy)}</span><span class="dn">Satım ${money(w.sell)}</span></div>
+    <table>${w.list.slice(0, 12).map(x => `<tr><td>${new Date(x.t).toLocaleTimeString("tr-TR")}</td><td class="${x.side === "AL" ? "up" : "dn"}">${x.side}</td><td>${fmt(x.p)}</td><td>${money(x.val)}</td></tr>`).join("")}</table>`; }
+  $("dFlow").innerHTML = html; drawCharts();
+}
+function setupCanvas(cv) { const dpr = window.devicePixelRatio || 1; const w = cv.clientWidth, h = +cv.getAttribute("height"); cv.width = w * dpr; cv.height = h * dpr; cv.style.height = h + "px"; const g = cv.getContext("2d"); g.scale(dpr, dpr); g.clearRect(0, 0, w, h); g.font = "10px system-ui"; return {g, w, h}; }
+function drawCharts() {
+  const a = cur; if (!a || !a.k) return; const n = Math.min(zoom, a.k.length); const k = a.k.slice(-n), off = a.k.length - n, S = a.series;
+  const {g, w, h} = setupCanvas($("cMain")); const R = 58, vh = 50, ch = h - vh - 6, cw = (w - R) / n;
+  let hi = Math.max(...k.map(x => x.h)), lo = Math.min(...k.map(x => x.l)); const pad = (hi - lo) * 0.06; hi += pad; lo -= pad;
+  const Y = (p) => (hi - p) / (hi - lo) * ch, X = (i) => i * cw + cw / 2;
+  g.strokeStyle = "#1a222c"; g.fillStyle = "#8b98a5"; for (let i = 0; i <= 4; i++) { const p = lo + (hi - lo) * i / 4; g.beginPath(); g.moveTo(0, Y(p)); g.lineTo(w - R, Y(p)); g.stroke(); g.fillText(fmt(p), w - R + 3, Y(p) + 3); }
+  // Bollinger bandı
+  g.fillStyle = "rgba(76,154,255,.07)"; g.beginPath(); for (let i = 0; i < n; i++) g.lineTo(X(i), Y(S.bu[off + i])); for (let i = n - 1; i >= 0; i--) g.lineTo(X(i), Y(S.bl[off + i])); g.fill();
+  const hline = (p, col, dash, label) => { if (p < lo || p > hi) return; g.save(); g.strokeStyle = col; g.setLineDash(dash || []); g.lineWidth = 1; g.beginPath(); g.moveTo(0, Y(p)); g.lineTo(w - R, Y(p)); g.stroke(); g.restore(); if (label) { g.fillStyle = col; g.fillText(label, 2, Y(p) - 2); } };
+  for (const [r, v] of Object.entries(a.fib.levels)) hline(v, "rgba(240,185,11,.55)", [4, 4], "Fib " + r);
+  a.supports.forEach(s => hline(s.price, "rgba(22,199,132,.8)", null)); a.resistances.forEach(s => hline(s.price, "rgba(234,57,67,.8)", null));
+  if (a.poc) hline(a.poc, "rgba(180,140,255,.8)", [2, 2], "POC");
+  // mumlar
+  for (let i = 0; i < n; i++) { const c = k[i], up = c.c >= c.o; g.strokeStyle = g.fillStyle = up ? "#16c784" : "#ea3943"; g.beginPath(); g.moveTo(X(i), Y(c.h)); g.lineTo(X(i), Y(c.l)); g.stroke(); const bw = Math.max(1, cw * 0.7); g.fillRect(X(i) - bw / 2, Y(Math.max(c.o, c.c)), bw, Math.max(1, Math.abs(Y(c.o) - Y(c.c)))); }
+  const line = (arr, col) => { g.strokeStyle = col; g.lineWidth = 1.2; g.beginPath(); for (let i = 0; i < n; i++) { const v = arr[off + i]; if (v >= lo && v <= hi) g.lineTo(X(i), Y(v)); else g.moveTo(X(i), Y(Math.min(hi, Math.max(lo, v)))); } g.stroke(); g.lineWidth = 1; };
+  line(S.e20, "#4c9aff"); line(S.e50, "#f0b90b"); line(S.e200, "#e6edf3");
+  // fiyat etiketi
+  g.fillStyle = "#f0b90b"; g.fillRect(w - R, Y(a.price) - 7, R, 14); g.fillStyle = "#000"; g.fillText(fmt(a.price), w - R + 3, Y(a.price) + 3);
+  // hacim (koyu kısım = agresif alım)
+  const mv = Math.max(...k.map(x => x.v)); for (let i = 0; i < n; i++) { const c = k[i], bh = c.v / mv * vh, bw = Math.max(1, cw * 0.7), by = h - bh; g.fillStyle = "rgba(234,57,67,.45)"; g.fillRect(X(i) - bw / 2, by, bw, bh); const tb = c.v ? c.tb / c.v : 0; g.fillStyle = "rgba(22,199,132,.7)"; g.fillRect(X(i) - bw / 2, h - bh * tb, bw, bh * tb); }
+  g.fillStyle = "#8b98a5"; g.fillText("Hacim (yeşil: agresif alım)", 2, h - vh + 2);
+  // MACD
+  { const {g, w, h} = setupCanvas($("cMacd")); const m = S.macd; const hs = m.h.slice(-n), ms = m.m.slice(-n), ss = m.sg.slice(-n); const mx = Math.max(...hs.map(Math.abs), ...ms.map(Math.abs), ...ss.map(Math.abs)) || 1; const Y = (v) => h / 2 - v / mx * (h / 2 - 4);
+    for (let i = 0; i < n; i++) { g.fillStyle = hs[i] >= 0 ? (i && hs[i] > hs[i - 1] ? "#16c784" : "#0e7a52") : (i && hs[i] < hs[i - 1] ? "#ea3943" : "#8c2228"); const bw = Math.max(1, cw * 0.7); g.fillRect(X(i) - bw / 2, Math.min(Y(0), Y(hs[i])), bw, Math.abs(Y(hs[i]) - Y(0))); }
+    const pl = (arr, col) => { g.strokeStyle = col; g.beginPath(); arr.forEach((v, i) => g.lineTo(X(i), Y(v))); g.stroke(); }; pl(ms, "#4c9aff"); pl(ss, "#f0b90b"); g.fillStyle = "#8b98a5"; g.fillText("MACD 12/26/9", 2, 10); }
+  // RSI
+  { const {g, w, h} = setupCanvas($("cRsi")); const rs = S.rsi.slice(-n); const Y = (v) => (100 - v) / 100 * (h - 4) + 2;
+    g.fillStyle = "rgba(139,152,165,.08)"; g.fillRect(0, Y(70), w - R, Y(30) - Y(70)); g.strokeStyle = "#2a3542"; [30, 50, 70].forEach(v => { g.beginPath(); g.moveTo(0, Y(v)); g.lineTo(w - R, Y(v)); g.stroke(); g.fillStyle = "#8b98a5"; g.fillText(v, w - R + 3, Y(v) + 3); });
+    g.strokeStyle = "#b48cff"; g.beginPath(); rs.forEach((v, i) => g.lineTo(X(i), Y(v))); g.stroke(); g.fillStyle = "#8b98a5"; g.fillText("RSI 14: " + last(rs).toFixed(1), 2, 10); }
+}
+const last = (a) => a[a.length - 1];
+
+// ------------------------------------------------ bot
+async function loadBot() {
+  const repo = localStorage.getItem("repo") || "malisah61/binancebot"; $("repo").value = repo;
+  try {
+    const r = await fetch(`https://raw.githubusercontent.com/${repo}/main/state/portfolio.json?t=${Date.now()}`); if (!r.ok) throw new Error(r.status === 404 ? "Bot henüz çalışmadı ya da repo gizli (gizli repoda bu sekme veriyi okuyamaz; Telegram'dan /durum yaz)." : "HTTP " + r.status);
+    const pf = await r.json(); const eqs = pf.equity || []; const eq = eqs.length ? last(eqs)[1] : pf.cash; const ch = (eq / pf.start - 1) * 100;
+    const cl = pf.closed || []; const wins = cl.filter(x => x.pnl > 0).length;
+    $("bSum").innerHTML = `<div class="score" style="color:${ch >= 0 ? "var(--up)" : "var(--dn)"}">${eq.toFixed(2)}$ <small style="font-size:16px">${ch >= 0 ? "+" : ""}${ch.toFixed(2)}%</small></div>
+      <div>Başlangıç ${pf.start}$ · Nakit ${pf.cash.toFixed(2)}$ · Kapanan ${cl.length} işlem · Kazanma %${cl.length ? (wins / cl.length * 100).toFixed(0) : "-"}</div>
+      <div class="mut" style="font-size:12px">Son güncelleme: ${new Date(pf.updated).toLocaleString("tr-TR")}</div>`;
+    const {g, w, h} = setupCanvas($("cEq")); if (eqs.length > 1) { const v = eqs.map(x => x[1]); const mx = Math.max(...v, pf.start), mn = Math.min(...v, pf.start); const Y = (x) => (mx - x) / ((mx - mn) || 1) * (h - 10) + 5;
+      g.strokeStyle = "#2a3542"; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(0, Y(pf.start)); g.lineTo(w, Y(pf.start)); g.stroke(); g.setLineDash([]); g.strokeStyle = ch >= 0 ? "#16c784" : "#ea3943"; g.lineWidth = 1.5; g.beginPath(); v.forEach((x, i) => g.lineTo(i / (v.length - 1) * w, Y(x))); g.stroke(); }
+    const pos = Object.entries(pf.positions || {});
+    $("bPos").innerHTML = pos.length ? `<table><tr><th>Coin</th><th>Giriş</th><th>Stop</th><th>Hedef</th></tr>${pos.map(([s, p]) => `<tr data-s="${s}"><td><b>${s.replace("USDT", "")}</b></td><td>${fmt(p.entry)}</td><td class="dn">${fmt(p.stop)}</td><td class="up">${fmt(p.tp1_done ? p.tp2 : p.tp1)}</td></tr>`).join("")}</table>` : '<span class="mut">Açık pozisyon yok.</span>';
+    $("bClosed").innerHTML = cl.length ? `<table><tr><th>Coin</th><th>Giriş→Çıkış</th><th>Sonuç</th></tr>${cl.slice(-30).reverse().map(x => `<tr><td>${x.symbol.replace("USDT", "")}<div class="mut" style="font-size:11px">${new Date(x.closed).toLocaleDateString("tr-TR")}</div></td><td>${fmt(x.entry)} → ${fmt(x.exit)}</td><td class="${x.pnl >= 0 ? "up" : "dn"}">${x.pct >= 0 ? "+" : ""}${x.pct}%<br>${x.pnl.toFixed(2)}$</td></tr>`).join("")}</table>` : '<span class="mut">Henüz kapanan işlem yok.</span>';
+  } catch (e) { $("bSum").innerHTML = `<span class="dn">${e.message}</span>`; }
+}
+
+// ------------------------------------------------ gezinme
+function show(id) { for (const s of ["pScan", "pDetail", "pBot"]) $(s).classList.toggle("hide", s !== id); document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.p === id)); $("scanCtl").style.display = $("filt").style.display = id === "pScan" ? "" : "none"; if (id === "pBot") loadBot(); if (id === "pDetail" && cur && cur.k) setTimeout(drawCharts, 0); window.scrollTo(0, 0); }
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.p));
+$("scanBtn").onclick = scan; $("q").oninput = render; $("tf").onchange = () => results.length && scan();
+$("filt").onclick = (e) => { const c = e.target.closest(".chip"); if (!c) return; filter = c.dataset.f; document.querySelectorAll(".chip").forEach(x => x.classList.toggle("on", x === c)); render(); };
+$("list").onclick = (e) => { const c = e.target.closest(".coin"); if (c) openDetail(c.dataset.s); };
+$("bPos").onclick = (e) => { const c = e.target.closest("tr[data-s]"); if (c) openDetail(c.dataset.s); };
+$("dRef").onclick = () => cur && cur.symbol && openDetail(cur.symbol);
+document.querySelectorAll("[data-z]").forEach(b => b.onclick = () => { zoom = +b.dataset.z; drawCharts(); });
+$("repoSave").onclick = () => { localStorage.setItem("repo", $("repo").value.trim()); loadBot(); };
+window.addEventListener("resize", () => cur && cur.k && drawCharts());
+try { const ls = JSON.parse(localStorage.getItem("lastScan")); if (ls && Date.now() - ls.time < 6 * 3600e3) { results = ls.results; $("tf").value = ls.tf; $("hdrInfo").textContent = new Date(ls.time).toLocaleTimeString("tr-TR", {hour: "2-digit", minute: "2-digit"}) + " · " + ls.tf + " (kayıtlı)"; render(); } } catch (e) {}
+</script>
+</body>
+</html>

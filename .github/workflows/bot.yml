@@ -1,7 +1,5 @@
-name: Simülasyon botu
+name: Simülasyon botu (tek sefer)
 on:
-  schedule:
-    - cron: "*/15 * * * *"   # her 15 dakikada bir (GitHub bazen birkaç dakika geciktirir)
   workflow_dispatch:
 permissions:
   contents: write

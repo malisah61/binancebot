@@ -1,4 +1,13 @@
-# 📊 Kripto Analiz + Simülasyon Botu
+# 📊 Kantitatif Karar Terminali V5 + Simülasyon Botu
+
+**Uygulama (V5):** Binance Futures + Spot verisiyle ilk 100 USDT çifti. Ağırlık modeli: Trend %20, Momentum (RSI/MACD/Z-Score) %18,
+Open Interest + rejim %15, Hacim (RVOL/taker/OBV) %10, Funding + L/S %10, Emir defteri (OBI) %10, FVG + likidite avı %10, VWAP %5.
+Kararlar: GÜÇLÜ LONG ≥70 · LONG 58–69 · NEUTRAL 43–57 · SHORT 30–42 · GÜÇLÜ SHORT ≤29. ATR planı: SL 1.5×, TP1 1.5×, TP2 3×.
+Sekmeler: Tarama · Fırsat (liderlerle korelasyonlu ama geride kalan coinler) · Detay (her özellik + coindeki anlamı, canlı WebSocket fiyat) ·
+Sinyaller (localStorage kaydı, geçmiş mumlarla TP/SL doğrulaması, R istatistikleri) · Bot.
+
+> Not: GitHub botu ABD sunucusunda çalıştığı için Binance Futures verisine erişemez; bot spot verisiyle çalışır.
+
 
 Binance'te hacimce ilk 100 USDT çiftini 16 gösterge ile puanlayan **Android uygulaması** ve
 aynı motorla **sanal parayla** al-sat yapıp **Telegram'a bildirim** atan GitHub botu.

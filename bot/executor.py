@@ -207,8 +207,13 @@ def open_trade(D, ds, sym, d, plan, msgs):
         return
     side, close_side = ("BUY", "SELL") if d > 0 else ("SELL", "BUY")
     o = D.req("POST", "/fapi/v1/order", {"symbol": sym, "side": side, "type": "MARKET", "quantity": qty, "newOrderRespType": "RESULT"})
-    fill = float(o.get("avgPrice") or 0) or price
-    qty = float(o.get("executedQty") or qty)
+    fill = float(o.get("avgPrice") or 0)
+    if not fill or not float(o.get("executedQty") or 0):  # bazı demo sunucuları dolum bilgisini dönmüyor → pozisyondan oku
+        time.sleep(0.5)
+        amt, ep = D.position(sym)
+        fill, qty = (ep or price), (abs(amt) or qty)
+    else:
+        qty = float(o["executedQty"])
     # planı gerçek dolum fiyatına kaydır (ATR mesafeleri aynı kalır)
     shift = fill - price
     sl, tp1, tp2 = plan["sl"] + shift, plan["tp1"] + shift, plan["tp2"] + shift

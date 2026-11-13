@@ -1,0 +1,16 @@
+{
+ "positions": {},
+ "closed": [],
+ "paused": false,
+ "day": "2026-11-13",
+ "day_start": 4999.99360122,
+ "curve": [
+  [
+   1794593168814,
+   4999.99
+  ]
+ ],
+ "errors": [],
+ "halted": false,
+ "equity": 4999.99
+}

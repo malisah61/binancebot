@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 
 TOKEN = os.environ.get("TELEGRAM_TOKEN", "").strip()
@@ -9,15 +10,22 @@ def enabled():
     return bool(TOKEN)
 
 
+def _call(method, **kw):
+    """Telegram çağrısı, bağlantı koparsa 4 kez dener."""
+    for i in range(4):
+        try:
+            r = requests.post(f"{API}/{method}", data=kw, timeout=20)
+            return r.json()
+        except Exception as e:  # bildirim hatası botu durdurmasın
+            print(f"telegram {method} hata ({i+1}/4):", e)
+            time.sleep(2 + i * 3)
+    return {}
+
+
 def updates(offset=None):
     if not TOKEN:
         return []
-    try:
-        r = requests.get(API + "/getUpdates", params={"offset": offset, "timeout": 0}, timeout=15)
-        return r.json().get("result", [])
-    except Exception as e:  # bildirim hatası botu durdurmasın
-        print("telegram getUpdates hata:", e)
-        return []
+    return _call("getUpdates", offset=offset or "", timeout=0).get("result", [])
 
 
 def send(chat_id, text):
@@ -25,10 +33,8 @@ def send(chat_id, text):
         print("[telegram kapalı]\n" + text)
         return False
     for chunk in [text[i:i + 3900] for i in range(0, len(text), 3900)]:
-        try:
-            requests.post(API + "/sendMessage", timeout=15, data={
-                "chat_id": chat_id, "text": chunk, "parse_mode": "HTML", "disable_web_page_preview": "true"})
-        except Exception as e:
-            print("telegram send hata:", e)
+        r = _call("sendMessage", chat_id=chat_id, text=chunk, parse_mode="HTML", disable_web_page_preview="true")
+        if not r.get("ok"):
+            print("telegram send cevap:", r)
             return False
     return True

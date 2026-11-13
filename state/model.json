@@ -1,0 +1,73 @@
+{
+ "time": 1794577833993,
+ "tfs": {
+  "15m": {
+   "weights": {
+    "trend": 20,
+    "momentum": 18,
+    "oi": 15,
+    "volume": 10,
+    "deriv": 10,
+    "smc": 10,
+    "vwap": 5
+   },
+   "long_th": 58,
+   "short_th": 42.99,
+   "learned": false,
+   "test_avg_R": -0.009,
+   "test_win": 48.4,
+   "baseline_test_avg_R": 0.001
+  },
+  "30m": {
+   "weights": {
+    "trend": 20,
+    "momentum": 18,
+    "oi": 15,
+    "volume": 10,
+    "deriv": 10,
+    "smc": 10,
+    "vwap": 5
+   },
+   "long_th": 58,
+   "short_th": 42.99,
+   "learned": false,
+   "test_avg_R": -0.059,
+   "test_win": 46.0,
+   "baseline_test_avg_R": -0.044
+  },
+  "1h": {
+   "weights": {
+    "trend": 20,
+    "momentum": 18,
+    "oi": 15,
+    "volume": 10,
+    "deriv": 10,
+    "smc": 10,
+    "vwap": 5
+   },
+   "long_th": 58,
+   "short_th": 42.99,
+   "learned": false,
+   "test_avg_R": -0.025,
+   "test_win": 48.6,
+   "baseline_test_avg_R": -0.008
+  },
+  "4h": {
+   "weights": {
+    "trend": 20,
+    "momentum": 18,
+    "oi": 15,
+    "volume": 10,
+    "deriv": 10,
+    "smc": 10,
+    "vwap": 5
+   },
+   "long_th": 58,
+   "short_th": 42,
+   "learned": true,
+   "test_avg_R": 0.06,
+   "test_win": 53.7,
+   "baseline_test_avg_R": 0.05
+  }
+ }
+}

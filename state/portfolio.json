@@ -1,0 +1,21 @@
+{
+ "start": 1000.0,
+ "cash": 1000.0,
+ "positions": {},
+ "trades": [],
+ "closed": [],
+ "cooldown": {},
+ "equity": [
+  [
+   1794562015025,
+   1000.0
+  ]
+ ],
+ "alerts": {
+  "D_SOLUSDT": 1794562015025,
+  "D_BNBUSDT": 1794562015025,
+  "D_UNIUSDT": 1794562015025
+ },
+ "created": 1794562009667,
+ "updated": 1794562015025
+}

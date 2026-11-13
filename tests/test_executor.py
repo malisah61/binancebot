@@ -28,6 +28,9 @@ class H(BaseHTTPRequestHandler):
         if p in ("/fapi/v1/marginType", "/fapi/v1/leverage"): return self.send(200, {})
         if p == "/fapi/v1/order" and m == "POST":
             s = q["symbol"]
+            if q["type"] == "LIMIT":
+                i = 1000 + len(ORD); ORD.append({"orderId": i, "status": "NEW", "executedQty": "0", "price": q["price"], "symbol": s, "qty": q["quantity"], "side": q["side"]})
+                return self.send(200, {"orderId": i})
             if q["type"] == "MARKET":
                 qty = float(q["quantity"]) * (1 if q["side"] == "BUY" else -1)
                 cur = POS.get(s, (0, 0))[0]; POS[s] = (round(cur + qty, 6), PRICE[s])
@@ -39,7 +42,12 @@ class H(BaseHTTPRequestHandler):
             ALGO.pop(int(q["algoId"]), None); return self.send(200, {})
         if p == "/fapi/v1/openAlgoOrders": return self.send(200, [{"algoId": k} for k, v in ALGO.items() if v["symbol"] == q["symbol"]])
         if p == "/fapi/v1/allOpenOrders": return self.send(200, {})
-        if p == "/fapi/v1/order" and m == "DELETE": return self.send(200, {})
+        if p == "/fapi/v1/order" and m == "GET":
+            o = next(x for x in ORD if str(x["orderId"]) == q["orderId"]); return self.send(200, {**o, "avgPrice": o["price"] if o["status"] == "FILLED" else "0", "updateTime": int(time.time() * 1000)})
+        if p == "/fapi/v1/order" and m == "DELETE":
+            for x in ORD:
+                if "orderId" in q and str(x["orderId"]) == q["orderId"]: x["status"] = "CANCELED"
+            return self.send(200, {})
         if p == "/fapi/v1/income": return self.send(200, [x for x in INC if x["kind"] == q["incomeType"]])
         return self.send(404, {"code": -1, "msg": p})
     do_GET = do_POST = do_DELETE = handle_any
@@ -59,4 +67,15 @@ POS["XRPUSDT"] = (0, 0); INC += [{"kind": "REALIZED_PNL", "income": "12.5"}, {"k
 executor.sync(D, ds, msgs); assert not ds["positions"] and ds["closed"][-1]["pnl"] == 11.7; print(msgs[-1])
 ds["paused"] = True; executor.open_trade(D, ds, "XRPUSDT", 1, {"entry": 2.0, "sl": 1.9, "tp1": 2.1, "tp2": 2.2, "until": 0, "score": 70}, msgs)
 assert not ds["positions"]
+# LIMIT akışı
+ds["paused"] = False; ALGO.clear()
+executor.place_limit(D, ds, "XRPUSDT", 1, {"entry": 1.95, "sl": 1.88, "tp1": 2.02, "tp2": 2.09, "expire_t": int(time.time() * 1000) + 10**7, "until_ms": 10**7, "score": 70}, msgs)
+assert "XRPUSDT" in ds["pending"], msgs; print(msgs[-1])
+executor.sync(D, ds, msgs); assert "XRPUSDT" in ds["pending"]           # henüz dolmadı
+o = ORD[-1]; o["status"] = "FILLED"; o["executedQty"] = o["qty"]; POS["XRPUSDT"] = (float(o["qty"]), 1.95)
+executor.sync(D, ds, msgs); assert "XRPUSDT" in ds["positions"] and len(ALGO) == 3, (ds, ALGO); print(msgs[-1])
+# süresi dolan limit
+POS["XRPUSDT"] = (0, 0); INC.clear(); INC.append({"kind": "REALIZED_PNL", "income": "-7"}); executor.sync(D, ds, msgs)
+executor.place_limit(D, ds, "XRPUSDT", -1, {"entry": 2.1, "sl": 2.2, "tp1": 2.0, "tp2": 1.9, "expire_t": int(time.time() * 1000) - 1, "until_ms": 10**7, "score": 30}, msgs)
+executor.sync(D, ds, msgs); assert not ds["pending"] and ORD[-1]["status"] == "CANCELED"; print("süresi dolan limit iptal edildi")
 print("DEMO EMİR TESTİ GEÇTİ")

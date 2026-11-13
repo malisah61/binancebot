@@ -176,7 +176,66 @@ class BinanceError(Exception):
 
 # ------------------------------------------------ bot ile entegrasyon
 def new_state():
-    return {"positions": {}, "closed": [], "paused": False, "day": None, "day_start": None, "curve": [], "errors": []}
+    return {"positions": {}, "pending": {}, "closed": [], "paused": False, "day": None, "day_start": None, "curve": [], "errors": []}
+
+
+def _risk_gate(D, ds, sym, msgs):
+    ds.setdefault("pending", {})
+    if ds["paused"] or sym in ds["positions"] or sym in ds["pending"] or len(ds["positions"]) + len(ds["pending"]) >= CFG["max_pos"]:
+        return None
+    D.load_info()
+    if sym not in D.info:
+        return None
+    eq, avail = D.balance()
+    if ds.get("day_start") and eq < ds["day_start"] * (1 - CFG["daily_loss"]):
+        if not ds.get("halted"):
+            msgs.append(f"🧪⛔ DEMO günlük zarar limiti (%{CFG['daily_loss']*100:.0f}) aşıldı; bugün yeni işlem yok.")
+        ds["halted"] = True
+        return None
+    try:
+        D.req("POST", "/fapi/v1/marginType", {"symbol": sym, "marginType": "ISOLATED"})
+    except BinanceError as e:
+        if e.code != -4046:
+            ds["errors"].append(f"marginType {sym}: {e}")
+    D.req("POST", "/fapi/v1/leverage", {"symbol": sym, "leverage": CFG["lev"]})
+    return min(eq * CFG["margin_frac"], avail * 0.9)
+
+
+def place_limit(D, ds, sym, d, plan, msgs):
+    """Geri çekilme stratejisi: giriş seviyesine LIMIT emir. Dolunca sync() stop/hedefleri koyar."""
+    margin = _risk_gate(D, ds, sym, msgs)
+    if not margin:
+        return
+    price = D.rp(sym, plan["entry"])
+    qty = D.rq(sym, margin * CFG["lev"] / price)
+    if qty < D.info[sym]["minq"] or qty * price < D.info[sym]["notional"]:
+        ds["errors"].append(f"{sym}: limit miktarı çok küçük ({qty})")
+        return
+    o = D.req("POST", "/fapi/v1/order", {"symbol": sym, "side": "BUY" if d > 0 else "SELL", "type": "LIMIT", "timeInForce": "GTC",
+                                          "quantity": qty, "price": price})
+    ds["pending"][sym] = {"orderId": o["orderId"], "dir": d, "qty": qty, "entry": price, "sl": plan["sl"], "tp1": plan["tp1"], "tp2": plan["tp2"],
+                          "expire_t": plan["expire_t"], "until_ms": plan["until_ms"], "score": plan["score"], "created": int(time.time() * 1000)}
+    msgs.append(f"🧪⏳ DEMO limit {'ALIŞ' if d > 0 else 'SATIŞ'} {sym.replace('USDT', '')} {qty} @ {price:g} (stop {D.rp(sym, plan['sl']):g})")
+
+
+def protect(D, ds, sym, pos, msgs):
+    """Dolmuş pozisyona borsa tarafında SL + TP1 (yarısı) + TP2 koy. Konamazsa güvenlik için kapat."""
+    close_side = "SELL" if pos["dir"] > 0 else "BUY"
+    try:
+        pos["orders"]["sl"] = D.cond(sym, close_side, "STOP_MARKET", pos["sl"], close=True)
+        half = D.rq(sym, pos["qty"] / 2)
+        if half >= D.info[sym]["minq"]:
+            pos["orders"]["tp1"] = D.cond(sym, close_side, "TAKE_PROFIT_MARKET", pos["tp1"], qty=half)
+        pos["orders"]["tp2"] = D.cond(sym, close_side, "TAKE_PROFIT_MARKET", pos["tp2"], close=True)
+        return True
+    except BinanceError as e:
+        ds["errors"].append(f"{sym} koruma emri hatası: {e} → pozisyon kapatıldı")
+        D.cancel_all(sym)
+        amt, _ = D.position(sym)
+        if amt:
+            D.req("POST", "/fapi/v1/order", {"symbol": sym, "side": close_side, "type": "MARKET", "quantity": abs(amt), "reduceOnly": "true"})
+        msgs.append(f"🧪⚠️ DEMO {sym}: stop/hedef konamadı (fiyat seviyeyi geçmiş olabilir), güvenlik için kapatıldı ({e.msg})")
+        return False
 
 
 def open_trade(D, ds, sym, d, plan, msgs):
@@ -242,6 +301,35 @@ def sync(D, ds, msgs, close_all=False):
     day = time.strftime("%Y-%m-%d", time.gmtime(now / 1000 + 3 * 3600))
     if ds.get("day") != day:
         ds.update(day=day, day_start=eq, halted=False)
+    ds.setdefault("pending", {})
+    D.load_info()
+    for sym in list(ds["pending"]):
+        q = ds["pending"][sym]
+        try:
+            o = D.req("GET", "/fapi/v1/order", {"symbol": sym, "orderId": q["orderId"]})
+        except BinanceError as e:
+            ds["errors"].append(f"{sym} limit sorgu: {e}"); continue
+        st_, exq = o.get("status"), float(o.get("executedQty") or 0)
+        expired = now >= q["expire_t"] or close_all
+        if st_ in ("NEW", "PARTIALLY_FILLED") and expired:
+            try:
+                D.req("DELETE", "/fapi/v1/order", {"symbol": sym, "orderId": q["orderId"]})
+            except BinanceError:
+                pass
+            st_ = "CANCELED"
+        if st_ == "FILLED" or (st_ in ("CANCELED", "EXPIRED") and exq > 0):
+            amt, ep = D.position(sym)
+            fill = float(o.get("avgPrice") or 0) or ep or q["entry"]
+            pos = {"dir": q["dir"], "qty": abs(amt) or exq, "entry": fill, "sl": q["sl"], "tp1": q["tp1"], "tp2": q["tp2"], "opened": int(o.get("updateTime") or now),
+                   "until": int(o.get("updateTime") or now) + q["until_ms"], "score": q["score"], "tp1_done": False, "orders": {},
+                   "slippage": round((fill / q["entry"] - 1) * q["dir"] * 100, 3), "limit": True}
+            del ds["pending"][sym]
+            if protect(D, ds, sym, pos, msgs):
+                ds["positions"][sym] = pos
+                msgs.append(f"🧪✅ DEMO limit doldu: {'LONG' if pos['dir'] > 0 else 'SHORT'} {sym.replace('USDT', '')} {pos['qty']} @ {fill:g} · SL {q['sl']:g} TP1 {q['tp1']:g} TP2 {q['tp2']:g}")
+        elif st_ in ("CANCELED", "EXPIRED", "REJECTED"):
+            del ds["pending"][sym]
+            ds["expired"] = ds.get("expired", 0) + 1
     for sym in list(ds["positions"]):
         p = ds["positions"][sym]
         amt, _ = D.position(sym)
@@ -281,5 +369,5 @@ def status(ds):
     cl = ds["closed"]
     w = sum(1 for x in cl if x["pnl"] > 0)
     return (f"🧪 <b>DEMO hesap</b> ({CFG['tf']} {CFG['lev']}x) — bakiye {ds.get('equity', 0):.2f} USDT"
-            f"{' · ⏸ DURAKLATILDI' if ds['paused'] else ''}\nAçık: {len(ds['positions'])} · Kapanan: {len(cl)} · Kazanma: "
+            f"{' · ⏸ DURAKLATILDI' if ds['paused'] else ''}\nAçık: {len(ds['positions'])} · Bekleyen limit: {len(ds.get('pending', {}))} · Kapanan: {len(cl)} · Kazanma: "
             f"{'%' + format(w / len(cl) * 100, '.0f') if cl else '-'} · Toplam: {sum(x['pnl'] for x in cl):+.2f}$")

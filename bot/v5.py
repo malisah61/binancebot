@@ -206,6 +206,14 @@ def compute(df: pd.DataFrame, tf: str, weights: dict | None = None) -> pd.DataFr
     R["f_vwap"] = np.sign(c - vwap)
     R["f_vwap_atr"] = (c - vwap) / atr          # VWAP'tan uzaklık (ATR cinsinden)
 
+    # ---- YAPI: son dip/tepe ve fiyatın bu aralıktaki konumu ("dipten % kaç yükseldi")
+    R["f_lo48"], R["f_hi48"] = l.rolling(48, min_periods=20).min(), h.rolling(48, min_periods=20).max()
+    R["f_lo12"], R["f_hi12"] = l.rolling(12, min_periods=6).min(), h.rolling(12, min_periods=6).max()
+    rng = (R["f_hi48"] - R["f_lo48"]).replace(0, np.nan)
+    R["f_pos"] = (c - R["f_lo48"]) / rng                     # 0 = dipte, 1 = tepede
+    R["f_from_lo"] = (c / R["f_lo48"] - 1) * 100             # dipten yükseliş %
+    R["f_from_hi"] = (c / R["f_hi48"] - 1) * 100             # tepeden düşüş % (negatif)
+
     # ---- SKOR
     keys = list(WEIGHTS)
     comp = R[keys].astype(float)
@@ -245,6 +253,12 @@ def signals(R, score, st):
         if st.get("need_sweep"):
             d = np.where((d > 0) & (R["f_ssl3"].values > 0), 1, np.where((d < 0) & (R["f_bsl3"].values > 0), -1, 0))
         strength = np.nan_to_num(np.abs(z))
+    elif typ == "pullback":  # yön trendden; tepede long / dipte short açılmaz
+        d = np.where(sc >= st["lt"], 1, np.where(sc <= st["st"], -1, 0))
+        pos = np.nan_to_num(R["f_pos"].values.astype(float), nan=0.5)
+        mp = st.get("max_pos", 0.6)
+        d = np.where((d > 0) & (pos > mp), 0, np.where((d < 0) & (pos < 1 - mp), 0, d))
+        strength = np.abs(sc - 50)
     else:  # sweep
         d = np.where(R["f_ssl1"].values > 0, 1, np.where(R["f_bsl1"].values > 0, -1, 0))
         strength = np.nan_to_num(np.abs(ext))
@@ -256,13 +270,45 @@ def signals(R, score, st):
     return d.astype(int), strength
 
 
+def pullback_levels(R, d, st):
+    """Geri çekilme stratejisi için her sinyal mumunda limit emir seviyeleri.
+    Dönen: entry, sl, tp1, tp2 dizileri ve geçerli (risk/ödül uygun) sinyal maskesi."""
+    c = R["c"].values.astype(float)
+    A = R["atr"].values.astype(float)
+    lo, hi = R["f_lo48"].values.astype(float), R["f_hi48"].values.astype(float)
+    lo_s = R["f_lo12" if st.get("stop_lb", 12) == 12 else "f_lo48"].values.astype(float)
+    hi_s = R["f_hi12" if st.get("stop_lb", 12) == 12 else "f_hi48"].values.astype(float)
+    if st.get("entry") == "fib":  # dip-tepe aralığının f geri çekilmesi (fiyat zaten altındaysa mevcut fiyat)
+        f = st.get("fib", 0.5)
+        e_long = np.minimum(c, hi - f * (hi - lo))
+        e_short = np.maximum(c, lo + f * (hi - lo))
+    else:  # mevcut fiyatın k ATR altı/üstü
+        k = st.get("k", 0.5)
+        e_long, e_short = c - k * A, c + k * A
+    buf = st.get("buf", 0.3)
+    sl_long = np.minimum(lo_s - buf * A, e_long - 0.8 * A)    # yapısal stop: son dibin altı (en az 0.8 ATR)
+    sl_short = np.maximum(hi_s + buf * A, e_short + 0.8 * A)
+    entry = np.where(d > 0, e_long, e_short)
+    sl = np.where(d > 0, sl_long, sl_short)
+    risk = np.abs(entry - sl)
+    tp1 = entry + d * risk * st.get("tp1", 1.5)
+    tp2 = entry + d * risk * st.get("tp2", 2.5)
+    ok = (d != 0) & np.isfinite(entry) & np.isfinite(sl) & (risk <= st.get("max_risk", 3.0) * A) & (risk > 0)
+    return entry, sl, tp1, tp2, ok
+
+
 def strategy_name(st):
     t = st.get("type")
-    ex = f"SL{st['sl']}/TP{st['tp1']}-{st['tp2']}"
+    ex = f"SL{st.get('sl')}/TP{st.get('tp1')}-{st.get('tp2')}"
     h = {"with": " +üst trend yönünde", "against": " +üst trende karşı"}.get(st.get("htf"), "")
     if t == "trend":
         e = f", VWAP'tan ≤{st['max_ext']} ATR" if st.get("max_ext") is not None else ""
         return f"Trend takibi (skor ≥{st['lt']} / ≤{round(st['st'])}{e}){h}, {ex}"
     if t == "meanrev":
         return f"Ortalamaya dönüş (|Z|≥{st['z']}, RSI {st['rsi_lo']}/{st['rsi_hi']}{', likidite avı şart' if st.get('need_sweep') else ''}){h}, {ex}"
+    if t == "pullback":
+        ent = f"{st.get('fib', 0.5)} Fibonacci geri çekilmesine" if st.get("entry") == "fib" else f"fiyatın {st.get('k', 0.5)} ATR gerisine"
+        return (f"Geri çekilmede limit giriş (skor ≥{st['lt']} / ≤{round(st['st'])}, dip-tepe aralığının en fazla %{int(st.get('max_pos', 0.6) * 100)}'inde, "
+                f"{ent} limit emir, {st.get('expire', 6)} mum geçerli, stop son {st.get('stop_lb', 12)} mumun dibinin/tepesinin ötesi, "
+                f"hedef {st.get('tp1', 1.5)}R / {st.get('tp2', 2.5)}R){h}")
     return f"Likidite avı tersine dönüş{h}, {ex}"

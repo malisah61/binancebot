@@ -172,6 +172,11 @@
     // 8) VWAP (son ~24 saat)
     const nV = Math.max(20, Math.min(N(c), Math.round(864e5 / (opt.tfMs || 36e5)))); let pv = 0, vv = 0; for (let i = N(c) - nV; i < N(c); i++) { pv += (h[i] + l[i] + c[i]) / 3 * v[i]; vv += v[i]; }
     M.vwap = pv / (vv || 1e-12); parts.vwap = Math.tanh((price - M.vwap) / (A || 1) / 2);
+    // Yapı: son 48 / 12 mumun dibi-tepesi, fiyatın aralıktaki konumu (dipten % kaç yükseldi)
+    M.lo48 = Math.min(...l.slice(-48)); M.hi48 = Math.max(...h.slice(-48)); M.lo12 = Math.min(...l.slice(-12)); M.hi12 = Math.max(...h.slice(-12));
+    M.pos = (price - M.lo48) / ((M.hi48 - M.lo48) || 1e-12); M.fromLo = (price / M.lo48 - 1) * 100; M.fromHi = (price / M.hi48 - 1) * 100;
+    if (M.pos > 0.85) trig(-1, `Fiyat son 48 mumun dip-tepe aralığının tepesinde (%${(M.pos * 100).toFixed(0)}): long için geç`);
+    if (M.pos < 0.15) trig(1, `Fiyat son 48 mumun dip-tepe aralığının dibinde (%${(M.pos * 100).toFixed(0)}): short için geç`);
 
     // ---- SKOR
     // Ağırlıklar: öğrenilmiş model (opt.weights, işaretli olabilir) ya da varsayılan

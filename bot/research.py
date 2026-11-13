@@ -230,6 +230,14 @@ def strategy_grid():
                     g.append({"type": "meanrev", "z": z, "rsi_hi": hi, "rsi_lo": lo, "need_sweep": sw, "htf": None, **ex})
         for h in (None, "with", "against"):
             g.append({"type": "sweep", "htf": h, **ex})
+    # Geri çekilmede limit giriş: tepeden alma, yapısal stop, R katı hedefler
+    for lt in (58, 66):
+        for mp in (0.5, 0.7):
+            for entry in ({"entry": "fib", "fib": 0.382}, {"entry": "fib", "fib": 0.5}, {"entry": "atr", "k": 0.5}, {"entry": "atr", "k": 1.0}):
+                for tp1, tp2 in ((1.0, 2.0), (1.5, 3.0)):
+                    for h in (None, "with"):
+                        g.append({"type": "pullback", "lt": lt, "st": 100 - lt, "max_pos": mp, **entry, "expire": 6, "stop_lb": 12,
+                                  "buf": 0.3, "max_risk": 3.0, "tp1": tp1, "tp2": tp2, "htf": h, "max_new": 3})
     return g
 
 
@@ -255,6 +263,17 @@ def run_strategy(coins, tf, strat, lev, part, split_t, scores):
             sig[sym][grp["i"].values] = 0
     out = []
     for sym, (df, R, fm) in coins.items():
+        if strat["type"] == "pullback":
+            d = sig[sym]
+            e, sl, t1, t2, ok = v5.pullback_levels(R, d, strat)
+            idx = np.flatnonzero(ok)
+            orders = [(int(i), int(d[i]), float(e[i]), float(sl[i]), float(t1[i]), float(t2[i]), strat.get("expire", 6), None) for i in idx]
+            tr = sim.simulate_levels(df["t"].values, df["o"].values.astype(float), df["h"].values.astype(float), df["l"].values.astype(float),
+                                     df["c"].values.astype(float), orders, lev, v5.TF_MS[tf], fmark=fm, max_hold=MAX_HOLD[tf])
+            for x in tr:
+                x["sym"] = sym
+            out += tr
+            continue
         tr = sim.simulate(df["t"].values, df["h"].values, df["l"].values, df["c"].values, R["atr"].values, sig[sym], lev,
                           v5.TF_MS[tf], fmark=fm, max_hold=MAX_HOLD[tf], sl_m=strat["sl"], tp1_m=strat["tp1"], tp2_m=strat["tp2"])
         for x in tr:

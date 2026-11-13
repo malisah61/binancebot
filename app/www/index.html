@@ -136,14 +136,26 @@ function botStrategy(tf) { const m = S.model && S.model.tfs && S.model.tfs[tf]; 
 function botSignal(m, comps, tf) {
   const B = botStrategy(tf), st = B.st; let tw = 0, ts = 0;
   for (const [k, w] of Object.entries(B.w)) if (comps[k] !== undefined && w) { tw += Math.abs(w); ts += w * comps[k]; }
-  const score = 50 + 50 * ts / (tw || 1); let dir = 0, why = "", strength = 0;
+  const score = 50 + 50 * ts / (tw || 1); let dir = 0, why = "", strength = 0, limit = null;
   const ssl3 = (m.sw || []).some((x) => x.type === "SSL"), bsl3 = (m.sw || []).some((x) => x.type === "BSL"), ssl1 = (m.sw || []).some((x) => x.type === "SSL" && x.ago === 0), bsl1 = (m.sw || []).some((x) => x.type === "BSL" && x.ago === 0);
   if (st.type === "trend") { dir = score >= st.lt ? 1 : score <= st.st ? -1 : 0; if (dir && st.max_ext != null && Math.abs(m.ext) > st.max_ext) { why = `fiyat VWAP'tan ${Math.abs(m.ext).toFixed(1)} ATR uzak (sınır ${st.max_ext}), kovalamaz`; dir = 0; } strength = Math.abs(score - 50); if (!why) why = `canlı skor ${score.toFixed(0)} (eşik ${st.lt}/${Math.round(st.st)})`; }
   else if (st.type === "meanrev") { dir = m.z <= -st.z && m.rsi <= st.rsi_lo ? 1 : m.z >= st.z && m.rsi >= st.rsi_hi ? -1 : 0; if (st.need_sweep) dir = dir > 0 && ssl3 ? 1 : dir < 0 && bsl3 ? -1 : 0; strength = Math.abs(m.z); why = `Z ${m.z.toFixed(2)} (eşik ±${st.z}), RSI ${m.rsi.toFixed(0)}`; }
+  else if (st.type === "pullback") {
+    dir = score >= st.lt ? 1 : score <= st.st ? -1 : 0; strength = Math.abs(score - 50); const mp = st.max_pos ?? 0.6;
+    why = `canlı skor ${score.toFixed(0)} · dip-tepe konumu %${(m.pos * 100).toFixed(0)} (dipten +${m.fromLo.toFixed(1)}%, tepeden ${m.fromHi.toFixed(1)}%)`;
+    if (dir > 0 && m.pos > mp) { why += ` · fiyat aralığın %${Math.round(mp * 100)}'inden yukarıda, tepeden long açmaz`; dir = 0; }
+    if (dir < 0 && m.pos < 1 - mp) { why += ` · fiyat aralığın dibine yakın, dipten short açmaz`; dir = 0; }
+    if (dir) { const A = m.atr, c = m.price; let e = st.entry === "fib" ? (dir > 0 ? Math.min(c, m.hi48 - (st.fib ?? 0.5) * (m.hi48 - m.lo48)) : Math.max(c, m.lo48 + (st.fib ?? 0.5) * (m.hi48 - m.lo48))) : c - dir * (st.k ?? 0.5) * A;
+      const lo = (st.stop_lb ?? 12) === 12 ? m.lo12 : m.lo48, hi = (st.stop_lb ?? 12) === 12 ? m.hi12 : m.hi48, buf = st.buf ?? 0.3;
+      const sl = dir > 0 ? Math.min(lo - buf * A, e - 0.8 * A) : Math.max(hi + buf * A, e + 0.8 * A), risk = Math.abs(e - sl);
+      if (risk > (st.max_risk ?? 3) * A) { why += " · yapısal stop çok uzak (risk/ödül kötü), işlem yok"; dir = 0; }
+      else limit = {entry: e, sl, tp1: e + dir * risk * (st.tp1 ?? 1.5), tp2: e + dir * risk * (st.tp2 ?? 2.5), expire: st.expire ?? 6, riskPct: risk / e * 100}; }
+  }
   else { dir = ssl1 ? 1 : bsl1 ? -1 : 0; strength = Math.abs(m.ext); why = dir ? (dir > 0 ? "bu mumda SSL likidite avı" : "bu mumda BSL likidite avı") : "bu mumda likidite avı yok"; }
   if (dir && st.htf === "with" && !(dir * Math.sign(m.htf || 0) > 0)) { why += " · üst trend ters, bekler"; dir = 0; }
   if (dir && st.htf === "against" && !(dir * Math.sign(m.htf || 0) < 0)) { why += " · üst trend aynı yönde, bekler"; dir = 0; }
-  return {dir, why, strength, B};
+  if (!dir) limit = null;
+  return {dir, why, strength, B, limit};
 }
 
 // ------------------------------------------------ yardımcılar
@@ -167,7 +179,8 @@ async function scan() {
             const a = TA.analyze(k, {htfMs: TFMS[tf] * 4, tfMs: TFMS[tf], oi, gls, funding: perp ? S.perps[s] : null, ...modelOpt(tf)});
             series[s] = k; const m = a.metrics;
             res.push({symbol: s, perp, qv24: vol[s], price: a.price, score: a.score, decision: a.decision, change: a.change, agreement: a.agreement, plan: a.plan,
-              m: {rsi: m.rsi, rvol: m.rvol, taker: m.taker, z: m.z, funding: m.funding, oiChg: m.oiChg, regime: m.regime, gls: m.gls, sweeps: m.sweeps.map((x) => x.type), sw: m.sweeps.map((x) => ({type: x.type, ago: x.ago})), htf: m.htf, ext: (a.price - m.vwap) / (m.atr || 1)},
+              m: {rsi: m.rsi, rvol: m.rvol, taker: m.taker, z: m.z, funding: m.funding, oiChg: m.oiChg, regime: m.regime, gls: m.gls, sweeps: m.sweeps.map((x) => x.type), sw: m.sweeps.map((x) => ({type: x.type, ago: x.ago})), htf: m.htf, ext: (a.price - m.vwap) / (m.atr || 1),
+                 pos: m.pos, fromLo: m.fromLo, fromHi: m.fromHi, lo48: m.lo48, hi48: m.hi48, lo12: m.lo12, hi12: m.hi12, atr: m.atr, price: a.price},
               comps: Object.fromEntries(a.components.map((c) => [c.key, c.score]))});
             recordSignal(a, s, tf, perp);
           }
@@ -199,7 +212,7 @@ function render() {
     <div class="row between"><div><b>${a.symbol.replace("USDT", "")}</b><span class="mut">/USDT</span> ${a.perp ? '<span class="tag">F</span>' : ""} <span class="tag">${money(a.qv24)}</span></div>
       <div>${fmt(a.price)} <span class="${a.change >= 0 ? "up" : "dn"}">${pct(a.change, 1)}</span></div></div>
     <div class="row between" style="margin-top:3px">${badge(a.decision)}<b style="color:${scoreCol(a.score)}">${a.score}</b></div>
-    <div class="mut sm" style="margin-top:3px">RSI ${a.m.rsi.toFixed(0)} · RVOL ${a.m.rvol.toFixed(1)}x · Alıcı %${(a.m.taker * 100).toFixed(0)}${a.m.funding !== undefined ? ` · Fund ${a.m.funding.toFixed(3)}%` : ""}${a.m.regime ? " · " + a.m.regime : ""}${a.m.sweeps.length ? " · 🎯" + a.m.sweeps.join("/") : ""}</div>
+    <div class="mut sm" style="margin-top:3px">${a.m.fromLo !== undefined ? `Dipten +${a.m.fromLo.toFixed(1)}% · Tepeden ${a.m.fromHi.toFixed(1)}% · ` : ""}RSI ${a.m.rsi.toFixed(0)} · RVOL ${a.m.rvol.toFixed(1)}x · Alıcı %${(a.m.taker * 100).toFixed(0)}${a.m.funding !== undefined ? ` · Fund ${a.m.funding.toFixed(3)}%` : ""}${a.m.regime ? " · " + a.m.regime : ""}${a.m.sweeps.length ? " · 🎯" + a.m.sweeps.join("/") : ""}</div>
     <div class="bar"><i style="width:${a.score}%;background:${scoreCol(a.score)}"></i></div></div>`).join("");
 }
 
@@ -242,7 +255,7 @@ async function loadDetail(sym, seq) {
   const bk = book ? {bids: book.bids.map((x) => [+x[0], +x[1]]), asks: book.asks.map((x) => [+x[0], +x[1]])} : null;
   const trades = tr ? tr.map((x) => ({p: +x.p, q: +x.q, m: x.m, T: x.T})) : null;
   const a = TA.analyze(k, {htfMs: TFMS[tf] * 4, tfMs: TFMS[tf], oi, gls, tls, funding: perp ? S.perps[sym] : null, book: bk, trades, ...modelOpt(tf)});
-  { const B = botStrategy(tf); const st = B.st, A = a.metrics.atr, d = a.plan.dir, e = a.price; const m = B.adopted ? [st.sl, st.tp1, st.tp2] : [1.5, 1.5, 3];
+  { const B = botStrategy(tf); const st = B.st, A = a.metrics.atr, d = a.plan.dir, e = a.price; const m = B.adopted && st.type !== "pullback" && st.sl ? [st.sl, st.tp1, st.tp2] : [1.5, 1.5, 3];
     a.plan = {...a.plan, sl: e - d * m[0] * A, tp1: e + d * m[1] * A, tp2: e + d * m[2] * A, m}; }
   a.symbol = sym; a.tf = tf; a.perp = perp; a.live = S.det && S.det.symbol === sym ? S.det.live : null;
   S.det = a; recordSignal(a, sym, tf, perp); renderDetail();
@@ -278,6 +291,8 @@ function features(a) {
     "4 kat büyük periyodun yönü. Küçük periyottaki sinyal bununla aynı yöndeyse başarı ihtimali artar, ters yöndeyse sadece kısa bir tepkidir."));
   t.push(it("VWAP", `${fmt(m.vwap)} (fiyat ${p > m.vwap ? "üstünde" : "altında"})`, p > m.vwap ? "up" : "dn",
     p > m.vwap ? "Son 24 saatte işlem yapanların ortalama maliyetinin üstünde: alıcılar kârda, VWAP'a geri çekilmeler destek olur." : "Ortalama maliyetin altında: son alıcılar zararda, VWAP'a yükselişlerde satış gelebilir."));
+  t.push(it("Dipten / tepeden (son 48 mum)", `+${m.fromLo.toFixed(1)}% / ${m.fromHi.toFixed(1)}%`, m.pos > 0.8 ? "dn" : m.pos < 0.2 ? "up" : "",
+    `Son 48 mumun dibi ${fmt(m.lo48)}, tepesi ${fmt(m.hi48)}; fiyat bu aralığın %${(m.pos * 100).toFixed(0)}'inde. ${m.pos > 0.8 ? "Tepeye çok yakın: long için risk/ödül kötü, geri çekilme beklemek daha mantıklı." : m.pos < 0.2 ? "Dibe çok yakın: short için geç, tepki yükselişi gelebilir." : "Aralığın ortasında."} 24 saatlik % değişim değil, gerçek dipten/tepeden uzaklık önemlidir.`));
   F.push({title: "📈 Trend", items: t});
   // Momentum & volatilite
   const mo = [];
@@ -346,11 +361,16 @@ function features(a) {
 }
 function botCard(a) {
   const m = a.metrics; const comps = Object.fromEntries(a.components.map((c) => [c.key, c.score]));
-  const sg = botSignal({z: m.z, rsi: m.rsi, htf: m.htf, ext: (a.price - m.vwap) / (m.atr || 1), sw: m.sweeps}, comps, a.tf); const B = sg.B; const t = B.test && B.test["5"];
+  const sg = botSignal({z: m.z, rsi: m.rsi, htf: m.htf, ext: (a.price - m.vwap) / (m.atr || 1), sw: m.sweeps, pos: m.pos, fromLo: m.fromLo, fromHi: m.fromHi,
+    lo48: m.lo48, hi48: m.hi48, lo12: m.lo12, hi12: m.hi12, atr: m.atr, price: a.price}, comps, a.tf); const B = sg.B; const t = B.test && B.test["5"]; const L = sg.limit;
   return `<div class="card"><h3>🤖 Botun stratejisi (${a.tf})</h3><div><b>${B.name}</b></div>
     <div class="mut sm" style="margin-top:3px">${B.adopted ? `✅ Geçmiş veride, modelin görmediği dönemde doğrulandı${t ? `: ${t.n} işlem, kazanma %${t.win}, ort. R ${t.avg_R}, PF ${t.pf}` : ""}` : "⚠️ Henüz doğrulanmış bir strateji yok; varsayılan kural kullanılıyor"}</div>
-    <div class="row between" style="margin-top:8px"><span>Bu coinde şimdi:</span>${sg.dir > 0 ? '<span class="badge b-sl">LONG AÇAR</span>' : sg.dir < 0 ? '<span class="badge b-ss">SHORT AÇAR</span>' : '<span class="badge b-n">İŞLEM YOK</span>'}</div>
-    <div class="mut sm">${sg.why}</div></div>`;
+    <div class="row between" style="margin-top:8px"><span>Bu coinde şimdi:</span>${sg.dir > 0 ? `<span class="badge b-sl">${L ? "LİMİT ALIŞ BEKLER" : "LONG AÇAR"}</span>` : sg.dir < 0 ? `<span class="badge b-ss">${L ? "LİMİT SATIŞ BEKLER" : "SHORT AÇAR"}</span>` : '<span class="badge b-n">İŞLEM YOK</span>'}</div>
+    <div class="mut sm">${sg.why}</div>
+    ${L ? `<div class="kv" style="margin-top:8px"><div><span>Limit giriş</span><b>${fmt(L.entry)} <small class="mut">${pct(L.entry / a.price - 1)}</small></b></div><div><span>Geçerlilik</span><b>${L.expire} mum</b></div>
+      <div><span class="dn">Yapısal stop</span><b>${fmt(L.sl)} <small class="dn">%${L.riskPct.toFixed(1)}</small></b></div><div><span>Risk</span><b>1R</b></div>
+      <div><span class="up">TP1</span><b>${fmt(L.tp1)}</b></div><div><span class="up">TP2</span><b>${fmt(L.tp2)}</b></div></div>
+      <div class="mut sm" style="margin-top:4px">Fiyat ${L.expire} mum içinde girişe gelmezse emir iptal edilir: tepeden kovalamaz. Stop son dibin/tepenin ötesinde, sıradan dalgalanmada tetiklenmez.</div>` : ""}</div>`;
 }
 function renderDetail() {
   const a = S.det; const P = a.plan, isL = P.dir > 0;
@@ -371,7 +391,7 @@ function renderDetail() {
     <div><span class="dn">SL (${P.m[0]}×ATR)</span><b>${fmt(P.sl)} <small class="dn">${pctOf(P.sl)}</small></b></div><div><span>Risk</span><b>1R</b></div>
     <div><span class="up">TP1 (${P.m[1]}×ATR)</span><b>${fmt(P.tp1)} <small class="up">${pctOf(P.tp1)}</small></b></div><div><span>R/Ö</span><b>1 : ${(P.m[1] / P.m[0]).toFixed(1)}</b></div>
     <div><span class="up">TP2 (${P.m[2]}×ATR)</span><b>${fmt(P.tp2)} <small class="up">${pctOf(P.tp2)}</small></b></div><div><span>R/Ö</span><b>1 : ${(P.m[2] / P.m[0]).toFixed(1)}</b></div></div>
-    <div class="mut sm" style="margin-top:6px">${a.decision === "NEUTRAL" ? "Karar NEUTRAL: plan sadece bilgi amaçlı, işlem sinyali yok." : "TP1'de yarısını kapat, stop'u girişe çek; kalanı TP2'ye bırak."}</div></div>
+    <div class="mut sm" style="margin-top:6px">${a.decision === "NEUTRAL" ? "Karar NEUTRAL: plan sadece bilgi amaçlı, işlem sinyali yok." : botStrategy(a.tf).st.type === "pullback" ? "Bilgi amaçlı piyasa planı. Botun asıl planı aşağıdaki limit giriş planıdır (geri çekilme bekler, yapısal stop)." : "TP1'de yarısını kapat, stop'u girişe çek; kalanı TP2'ye bırak."}</div></div>
   ${botCard(a)}
   ${opp}
   <div class="card"><h3>📋 Kararı tetikleyen koşullar</h3>${a.triggers.length ? a.triggers.map((t) => `<div class="trig"><span>${t.dir > 0 ? "🟢" : t.dir < 0 ? "🔴" : "🟡"}</span><span>${t.text}</span></div>`).join("") : '<div class="mut">Belirgin bir tetikleyici yok; piyasa kararsız.</div>'}</div>

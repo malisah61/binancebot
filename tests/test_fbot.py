@@ -17,8 +17,14 @@ binance.top_usdt = lambda n: [{"symbol": s} for s in syms]
 binance.klines = lambda s, tf, limit: series(int(s[1:-4]), MS[tf], limit, 0.0015 if int(s[1:-4]) % 2 else -0.0015)
 fbot.STATE = os.environ.get("OUT") or tempfile.mkdtemp()
 fbot.telegram.send = lambda chat, txt: print("[TG]", txt[:1500])
+import json as _j
+PB = {"type": "pullback", "lt": 58, "st": 42, "max_pos": 0.9, "entry": "atr", "k": 0.3, "expire": 6, "stop_lb": 12, "buf": 0.3, "max_risk": 3.0, "tp1": 1.0, "tp2": 2.0, "htf": None, "max_new": 3}
+os.makedirs(fbot.STATE, exist_ok=True)
+_j.dump({"tfs": {"15m": {"strategy": PB, "strategy_adopted": True, "strategy_name": "test geri çekilme"}}}, open(os.path.join(fbot.STATE, "model.json"), "w"))
 fbot.main()
 st = fbot.load("futures.json", None)
+print("bekleyen limit (15m):", len(st["accounts"]["15m_5x"].get("pending", [])))
+assert st["accounts"]["15m_5x"].get("pending"), "geri çekilme stratejisi limit emir bırakmalıydı"
 n_open = sum(len(a["positions"]) for a in st["accounts"].values())
 print("açık pozisyon:", n_open)
 assert n_open > 0

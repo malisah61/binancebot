@@ -137,9 +137,45 @@ def close_pos(acc, p, reason, ret, lev, tf, msgs):
     msgs.append(f"{e} {tf} {lev}x {'LONG' if p['dir'] > 0 else 'SHORT'} {p['sym'].replace('USDT', '')} kapandı: {reason} · ROE {roe*100:+.1f}% ({pnl:+.1f}$)")
 
 
+def fill_pending(acc, k15s, tf, lev, msgs):
+    """Bekleyen limit emirleri 15dk mumlarla kontrol et: dolduysa pozisyona çevir, süresi dolduysa iptal."""
+    keep, expired = [], 0
+    for q in acc.get("pending", []):
+        k = k15s.get(q["sym"])
+        if k is None:
+            keep.append(q); continue
+        filled = None
+        for c in k[k["t"] >= q["created"]].to_dict("records"):
+            if c["t"] >= q["expire_t"]:
+                break
+            if (q["dir"] > 0 and c["l"] <= q["entry"]) or (q["dir"] < 0 and c["h"] >= q["entry"]):
+                filled = c; break
+        if filled is not None:
+            d = q["dir"]
+            e = min(q["entry"], filled["o"]) if d > 0 else max(q["entry"], filled["o"])
+            margin = acc["equity"] * CFG["margin_frac"]
+            liq = e * (1 - d * (1 / lev - CFG["mmr"]))
+            sil = d * (liq - q["sl"]) > 0
+            p = {"sym": q["sym"], "dir": d, "entry": e, "atr": q["atr"], "sl": q["sl"], "tp1": q["tp1"], "tp2": q["tp2"],
+                 "stop": liq if sil else q["sl"], "stop_is_liq": bool(sil), "liq": liq, "tp1_done": False, "realized": 0.0,
+                 "margin": round(margin, 2), "opened": int(filled["t"]), "checked": int(filled["t"]),
+                 "until": int(filled["t"]) + v5.TF_MS[tf] * CFG["max_hold"][tf], "score": q["score"], "snap": q.get("snap"),
+                 "strategy": "pullback", "limit": True}
+            acc["positions"].append(p)
+            msgs.append(f"✅ {tf} {lev}x limit emir doldu: {'LONG' if d > 0 else 'SHORT'} {q['sym'].replace('USDT', '')} @ {fmt(e)}")
+        elif k["t"].iloc[-1] + 900_000 >= q["expire_t"]:
+            expired += 1
+        else:
+            keep.append(q)
+    acc["pending"] = keep
+    if expired:
+        acc["expired"] = acc.get("expired", 0) + expired
+
+
 def manage(state, k15s, msgs):
     for key, acc in state["accounts"].items():
         tf, lev = key.split("_")[0], int(key.split("_")[1][:-1])
+        fill_pending(acc, k15s, tf, lev, msgs)
         keep = []
         for p in acc["positions"]:
             k = k15s.get(p["sym"])
@@ -196,7 +232,8 @@ def status_text(state, px=None):
                     rem = 0.5 if p["tp1_done"] else 1.0
                     unreal += p["margin"] * lev * (p["realized"] + rem * p["dir"] * (cur / p["entry"] - 1))
         eq = a["equity"] + unreal
-        L.append(f"<code>{key:<9} {eq:7.0f}$ {len(a['positions']):>4} {len(cl):>5} {win:>5}</code>")
+        pend = f"+{len(a.get('pending', []))}⏳" if a.get("pending") else ""
+        L.append(f"<code>{key:<9} {eq:7.0f}$ {len(a['positions']):>4}{pend} {len(cl):>5} {win:>5}</code>")
     return "\n".join(L)
 
 
@@ -264,7 +301,7 @@ def main():
     msgs = []
     t0 = time.time()
     syms = [x["symbol"] for x in binance.top_usdt(CFG["coins"])]
-    held = {p["sym"] for a in state["accounts"].values() for p in a["positions"]}
+    held = {p["sym"] for a in state["accounts"].values() for p in a["positions"] + a.get("pending", [])}
     syms += [s for s in held if s not in syms]
 
     def one(s):
@@ -309,7 +346,15 @@ def main():
             for f in ("f_z", "f_rsi", "f_htf", "f_vwap_atr", "f_rvol", "f_ssl3", "f_bsl3"):
                 val = R[f].iloc[-1]
                 snap[f] = round(float(val), 2) if np.isfinite(val) else None
-            rows.append((s, float(sc[-1]), R.iloc[-1], int(df["t"].iloc[-1]), snap, int(d[-1]), float(strength[-1])))
+            lv = None
+            if st.get("type") == "pullback" and d[-1] != 0:
+                e_, sl_, t1_, t2_, ok_ = v5.pullback_levels(R.iloc[-1:].reset_index(drop=True), d[-1:], st)
+                if ok_[0]:
+                    lv = (float(e_[0]), float(sl_[0]), float(t1_[0]), float(t2_[0]))
+            for f in ("f_pos", "f_from_lo", "f_from_hi"):
+                val = R[f].iloc[-1]
+                snap[f] = round(float(val), 2) if np.isfinite(val) else None
+            rows.append((s, float(sc[-1]), R.iloc[-1], int(df["t"].iloc[-1]), snap, int(d[-1]), float(strength[-1]), lv))
         latest[tf] = [(r[0], r[1]) for r in rows]
         if not rows:
             continue
@@ -322,10 +367,31 @@ def main():
         for lev in LEVS:
             acc = state["accounts"][f"{tf}_{lev}x"]
             busy = {p["sym"] for p in acc["positions"]}
-            for s, sc, row, _, snap, d, _ in cands:
-                if len(acc["positions"]) >= CFG["max_pos"]:
+            acc.setdefault("pending", [])
+            busy |= {q["sym"] for q in acc["pending"]}
+            for s, sc, row, _, snap, d, _, lv in cands:
+                if len(acc["positions"]) + len(acc["pending"]) >= CFG["max_pos"]:
                     break
                 if s in busy:
+                    continue
+                if st.get("type") == "pullback":
+                    if lv is None:
+                        continue
+                    created = int(row["t"]) + v5.TF_MS[tf]
+                    q = {"sym": s, "dir": d, "entry": lv[0], "sl": lv[1], "tp1": lv[2], "tp2": lv[3], "atr": float(row["atr"]),
+                         "created": created, "expire_t": created + v5.TF_MS[tf] * st.get("expire", 6), "score": sc, "snap": snap}
+                    acc["pending"].append(q)
+                    busy.add(s)
+                    risk = abs(lv[0] - lv[1]) / lv[0] * 100
+                    msgs.append(f"⏳ {tf} {lev}x LİMİT {'LONG' if d > 0 else 'SHORT'} <b>{s.replace('USDT', '')}</b> giriş {fmt(lv[0])} "
+                                f"(şimdi {fmt(float(row['c']))}) SL {fmt(lv[1])} (risk %{risk:.1f}) TP1 {fmt(lv[2])} TP2 {fmt(lv[3])}")
+                    if DEMO and tf == executor.CFG["tf"] and lev == executor.CFG["lev"]:
+                        try:
+                            executor.place_limit(DEMO, DS, s, d, {"entry": lv[0], "sl": lv[1], "tp1": lv[2], "tp2": lv[3], "expire_t": q["expire_t"],
+                                                                  "until_ms": v5.TF_MS[tf] * CFG["max_hold"][tf], "score": sc}, msgs)
+                        except Exception as e:
+                            DS["errors"].append(f"{s} limit hatası: {e}")
+                            msgs.append(f"🧪⚠️ DEMO {s} limit emri gönderilemedi: {str(e)[:150]}")
                     continue
                 p = open_pos(acc, s, d, row, tf, lev, sc, snap, msgs, st)
                 busy.add(s)

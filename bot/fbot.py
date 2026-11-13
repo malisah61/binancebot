@@ -24,6 +24,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
 import binance  # noqa: E402
+import executor  # noqa: E402
 import telegram  # noqa: E402
 import v5  # noqa: E402
 
@@ -177,6 +178,7 @@ def open_pos(acc, sym, d, row, tf, lev, score, snap, msgs, st=None):
     acc["positions"].append(p)
     msgs.append(f"{'🟢 LONG' if d > 0 else '🔴 SHORT'} {tf} {lev}x <b>{sym.replace('USDT', '')}</b> @ {fmt(e)} (skor {score:.0f}) "
                 f"SL {fmt(p['sl'])} TP1 {fmt(p['tp1'])} TP2 {fmt(p['tp2'])}{' ⚠️likidasyon stoptan yakın' if stop_is_liq else ''}")
+    return p
 
 
 # ---------------------------------------------------------------- mesajlar
@@ -208,12 +210,25 @@ def handle_commands(state, px, latest):
             continue
         if not state.get("chat_id"):
             state["chat_id"] = chat
-            telegram.send(chat, "✅ Bağlandı! Komutlar: /durum /sinyal /coin BTC")
+            telegram.send(chat, "✅ Bağlandı! Komutlar: /durum /sinyal /coin BTC /demo /dur /devam /kapat")
             continue
         if chat != state["chat_id"]:
             continue
         if txt.startswith(("/durum", "/start")):
-            telegram.send(chat, status_text(state, px))
+            telegram.send(chat, status_text(state, px) + ("\n\n" + executor.status(DS) if DS else ""))
+        elif txt.startswith("/demo") and DS is not None:
+            telegram.send(chat, executor.status(DS) + ("\nSon hatalar: " + " | ".join(DS["errors"][-3:]) if DS["errors"] else ""))
+        elif txt.startswith("/dur") and DS is not None:
+            DS["paused"] = True
+            telegram.send(chat, "⏸ DEMO: yeni işlem açma durduruldu (açık pozisyonlar stop/hedefleriyle devam eder). /devam ile sürdür, /kapat ile hepsini kapat.")
+        elif txt.startswith("/devam") and DS is not None:
+            DS["paused"] = False
+            telegram.send(chat, "▶️ DEMO: işlem açma devam ediyor.")
+        elif txt.startswith("/kapat") and DS is not None and DEMO:
+            out = []
+            executor.sync(DEMO, DS, out, close_all=True)
+            DS["paused"] = True
+            telegram.send(chat, "⏹ DEMO: tüm pozisyonlar kapatıldı ve duraklatıldı.\n" + "\n".join(out))
         elif txt.startswith("/sinyal"):
             L = []
             for tf in TFS:
@@ -234,7 +249,11 @@ def handle_commands(state, px, latest):
 
 
 # ---------------------------------------------------------------- ana
+DEMO, DS = None, None
+
+
 def main():
+    global DEMO, DS
     state = load("futures.json", None)
     if not state:
         old = load("portfolio.json", {})
@@ -261,6 +280,17 @@ def main():
     px = {s: float(r[1]["c"].iloc[-1]) for s, r in data.items() if len(r[1])}
 
     manage(state, k15s, msgs)
+
+    if executor.enabled():
+        DS = load("demo.json", None) or executor.new_state()
+        try:
+            DEMO = executor.Demo()
+            executor.sync(DEMO, DS, msgs)
+        except Exception as e:
+            print("demo hatası:", e)
+            DS["errors"].append(f"senkron: {e}")
+            if "ulaşılamadı" in str(e):
+                DEMO = None
 
     latest = {}
     for tf in TFS:
@@ -297,8 +327,15 @@ def main():
                     break
                 if s in busy:
                     continue
-                open_pos(acc, s, d, row, tf, lev, sc, snap, msgs, st)
+                p = open_pos(acc, s, d, row, tf, lev, sc, snap, msgs, st)
                 busy.add(s)
+                if p and DEMO and tf == executor.CFG["tf"] and lev == executor.CFG["lev"]:
+                    try:
+                        executor.open_trade(DEMO, DS, s, d, {"entry": p["entry"], "sl": p["sl"], "tp1": p["tp1"], "tp2": p["tp2"],
+                                                             "until": p["until"], "score": p["score"]}, msgs)
+                    except Exception as e:
+                        DS["errors"].append(f"{s} açma hatası: {e}")
+                        msgs.append(f"🧪⚠️ DEMO {s} emri gönderilemedi: {str(e)[:150]}")
         state.setdefault("strategy", {})[tf] = st_name
 
     handle_commands(state, px, latest)
@@ -314,6 +351,8 @@ def main():
     if msgs:
         telegram.send(state.get("chat_id"), "\n".join(msgs))
     save("futures.json", state)
+    if DS is not None:
+        save("demo.json", DS)
     print("\n".join(msgs))
     print(status_text(state, px))
 

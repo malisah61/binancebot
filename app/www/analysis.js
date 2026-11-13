@@ -71,7 +71,7 @@
   const WEIGHTS = { trend: 20, momentum: 18, oi: 15, volume: 10, deriv: 10, book: 10, smc: 10, vwap: 5 };
   const GROUP_NAMES = { trend: "Trend", momentum: "Momentum", oi: "Open Interest", volume: "Hacim", deriv: "Funding + L/S", book: "Emir defteri", smc: "FVG + Likidite avı", vwap: "VWAP" };
 
-  function decision(s) { return s >= 70 ? "GÜÇLÜ LONG" : s >= 58 ? "LONG" : s >= 43 ? "NEUTRAL" : s >= 30 ? "SHORT" : "GÜÇLÜ SHORT"; }
+  function decision(s, lt = 58, st = 42.99) { const sl = Math.max(70, lt + 10), ss = Math.min(30, st - 10); return s >= sl ? "GÜÇLÜ LONG" : s >= lt ? "LONG" : s > st ? "NEUTRAL" : s >= ss ? "SHORT" : "GÜÇLÜ SHORT"; }
 
   // opt: {htfMs, oi:[{t,oi}], gls:[{t,r}], tls:[{t,r}], funding, book:{bids,asks}, trades:[{p,q,m,T}]}
   function analyze(k, opt = {}) {
@@ -174,14 +174,15 @@
     M.vwap = pv / (vv || 1e-12); parts.vwap = Math.tanh((price - M.vwap) / (A || 1) / 2);
 
     // ---- SKOR
-    let tw = 0, ts = 0; const comps = [];
-    for (const key of Object.keys(WEIGHTS)) { if (parts[key] === undefined) continue; tw += WEIGHTS[key]; ts += WEIGHTS[key] * parts[key]; comps.push({ key, name: GROUP_NAMES[key], weight: WEIGHTS[key], score: Math.round(parts[key] * 100) / 100 }); }
-    const total = ts / (tw || 1); const score = Math.round((50 + 50 * total) * 10) / 10; const dec = decision(score);
-    const agreement = comps.filter((x) => x.score * total > 0.05).length / (N(comps) || 1);
+    // Ağırlıklar: öğrenilmiş model (opt.weights, işaretli olabilir) ya da varsayılan
+    const W = opt.weights || WEIGHTS; let tw = 0, ts = 0, cov = 0; const comps = [];
+    for (const key of Object.keys(WEIGHTS)) { const w = W[key] || 0; if (parts[key] === undefined || !w) continue; tw += Math.abs(w); ts += w * parts[key]; cov += WEIGHTS[key]; comps.push({ key, name: GROUP_NAMES[key], weight: Math.round(w * 10) / 10, score: Math.round(parts[key] * 100) / 100 }); }
+    const total = ts / (tw || 1); const score = Math.round((50 + 50 * total) * 10) / 10; const dec = decision(score, opt.longTh, opt.shortTh);
+    const agreement = comps.filter((x) => x.score * Math.sign(x.weight) * total > 0.05).length / (N(comps) || 1);
     const dir = score >= 50 ? 1 : -1;
     const plan = { dir, entry: price, sl: price - dir * 1.5 * A, tp1: price + dir * 1.5 * A, tp2: price + dir * 3 * A, rr1: 1, rr2: 2 };
     const SR = srLevels(h, l, c, v, A); const fib = fibonacci(h, l);
-    return { price, score, decision: dec, agreement, components: comps, coverage: tw, triggers: T, metrics: M, plan, sr: SR, fib, change: N(c) > 24 ? price / last(c, 25) - 1 : 0 };
+    return { price, score, decision: dec, agreement, components: comps, coverage: opt.weights ? Math.round(tw / Object.values(opt.weights).reduce((a, x) => a + Math.abs(x), 0) * 100) : cov, triggers: T, metrics: M, plan, sr: SR, fib, change: N(c) > 24 ? price / last(c, 25) - 1 : 0 };
   }
 
   function fmt(x) { if (x === null || x === undefined || isNaN(x)) return "-"; const a = Math.abs(x); if (a >= 1000) return x.toLocaleString("tr-TR", { maximumFractionDigits: 2 }); if (a >= 1) return x.toFixed(4); if (a === 0) return "0"; return x.toPrecision(5); }

@@ -43,7 +43,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:5px 4px;b
 <header>
   <h1>📊 Karar <b>Terminali</b> <span class="tag">V5</span><span id="hdrInfo" class="mut sm" style="font-weight:400;margin-left:auto"></span></h1>
   <div id="scanCtl" class="row" style="margin-top:8px">
-    <select id="tf"><option value="15m">15 dk</option><option value="1h" selected>1 saat</option><option value="4h">4 saat</option><option value="1d">1 gün</option></select>
+    <select id="tf"><option value="15m">15 dk</option><option value="30m">30 dk</option><option value="1h" selected>1 saat</option><option value="4h">4 saat</option><option value="1d">1 gün</option></select>
     <input id="q" placeholder="Ara: BTC" style="flex:1;min-width:70px">
     <button class="pri" id="scanBtn">Tara</button>
   </div>
@@ -61,7 +61,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:5px 4px;b
     <div class="card"><h3>Son sinyaller</h3><div id="sigList"></div></div>
   </section>
   <section id="pBot" class="hide">
-    <div class="card"><h3>Simülasyon botu (GitHub)</h3><div id="bSum" class="mut">Yükleniyor…</div><canvas id="cEq" height="150" style="width:100%"></canvas></div>
+    <div class="card"><h3>🤖 Canlı bot: 8 sanal hesap</h3><div id="bSum" class="mut">Yükleniyor…</div><canvas id="cEq" height="150" style="width:100%;margin-top:8px"></canvas></div>
+    <div class="card"><h3>🧪 Araştırma: göstergelerin doğruluğu</h3><div id="bRes" class="mut">Yükleniyor…</div></div>
     <div class="card"><h3>Açık pozisyonlar</h3><div id="bPos"></div></div>
     <div class="card"><h3>Kapanan işlemler</h3><div id="bClosed"></div></div>
     <div class="card"><h3>Ayarlar</h3><div class="row"><span class="mut">Repo:</span><input id="repo" style="flex:1" value="malisah61/binancebot"><button id="repoSave">Kaydet</button></div></div>
@@ -83,9 +84,9 @@ const SPOT = ["https://api.binance.com", "https://data-api.binance.vision", "htt
 const FUT = ["https://fapi.binance.com"];
 const hostIx = new Map();
 const STABLE = new Set("USDC FDUSD TUSD BUSD DAI USDP EUR EURI AEUR USDE XUSD PAXG WBTC WBETH BFUSD USD1 TRY BRL GBP".split(" "));
-const TFMS = {"15m": 9e5, "1h": 36e5, "4h": 144e5, "1d": 864e5};
-const WIN = {"15m": 96, "1h": 24, "4h": 6, "1d": 3};
-const S = {results: [], series: {}, perps: {}, futOk: true, filter: "all", lag: null, lagTf: null, det: null, seq: 0, ws: null, poll: null, refresh: null};
+const TFMS = {"15m": 9e5, "30m": 18e5, "1h": 36e5, "4h": 144e5, "1d": 864e5};
+const WIN = {"15m": 96, "30m": 48, "1h": 24, "4h": 6, "1d": 3};
+const S = {model: null, results: [], series: {}, perps: {}, futOk: true, filter: "all", lag: null, lagTf: null, det: null, seq: 0, ws: null, poll: null, refresh: null};
 
 // ------------------------------------------------ veri
 async function get(hosts, path) {
@@ -122,6 +123,13 @@ async function topUsdt(n = 100) {
     .sort((a, b) => b.quoteVolume - a.quoteVolume).slice(0, n);
 }
 
+// ------------------------------------------------ öğrenilmiş model (bot araştırmasından)
+function repoName() { return localStorage.getItem("repo") || "malisah61/binancebot"; }
+function modelOpt(tf) { const m = S.model && S.model.tfs && S.model.tfs[tf]; return m && m.learned ? {weights: m.weights, longTh: m.long_th, shortTh: m.short_th} : {}; }
+async function loadModel() { try { const r = await fetch(`https://raw.githubusercontent.com/${repoName()}/main/state/model.json?t=${Date.now()}`); if (r.ok) { S.model = await r.json(); localStorage.setItem("model5", JSON.stringify(S.model)); } } catch (e) {} }
+try { S.model = JSON.parse(localStorage.getItem("model5") || "null"); } catch (e) {}
+loadModel();
+
 // ------------------------------------------------ yardımcılar
 function decCls(d) { return d === "GÜÇLÜ LONG" ? "b-sl" : d === "LONG" ? "b-l" : d === "NEUTRAL" ? "b-n" : d === "SHORT" ? "b-s" : "b-ss"; }
 function scoreCol(s) { return s >= 70 ? "var(--up)" : s >= 58 ? "#7bd88f" : s >= 43 ? "var(--mut)" : s >= 30 ? "#f08a8f" : "var(--dn)"; }
@@ -140,7 +148,7 @@ async function scan() {
         try {
           const [k, oi, gls] = await Promise.all([klines(s, tf, perp, 500), perp ? safe(oiHist(s, tf)) : null, perp ? safe(ratio("globalLongShortAccountRatio", s, tf)) : null]);
           if (k.length >= 120) {
-            const a = TA.analyze(k, {htfMs: TFMS[tf] * 4, tfMs: TFMS[tf], oi, gls, funding: perp ? S.perps[s] : null});
+            const a = TA.analyze(k, {htfMs: TFMS[tf] * 4, tfMs: TFMS[tf], oi, gls, funding: perp ? S.perps[s] : null, ...modelOpt(tf)});
             series[s] = k; const m = a.metrics;
             res.push({symbol: s, perp, qv24: vol[s], price: a.price, score: a.score, decision: a.decision, change: a.change, agreement: a.agreement, plan: a.plan,
               m: {rsi: m.rsi, rvol: m.rvol, taker: m.taker, z: m.z, funding: m.funding, oiChg: m.oiChg, regime: m.regime, gls: m.gls, sweeps: m.sweeps.map((x) => x.type)}});
@@ -153,7 +161,7 @@ async function scan() {
     };
     await Promise.all(Array.from({length: 8}, worker));
     S.results = res; S.series = series; S.tf = tf; S.lag = null;
-    $("hdrInfo").textContent = new Date().toLocaleTimeString("tr-TR", {hour: "2-digit", minute: "2-digit"}) + " · " + tf + (S.futOk ? "" : " · futures yok");
+    $("hdrInfo").textContent = new Date().toLocaleTimeString("tr-TR", {hour: "2-digit", minute: "2-digit"}) + " · " + tf + (modelOpt(tf).weights ? " · 🧠" : "") + (S.futOk ? "" : " · futures yok");
     try { localStorage.setItem("lastScan5", JSON.stringify({tf, time: Date.now(), results: res, futOk: S.futOk})); } catch (e) {}
   } catch (e) { $("list").innerHTML = `<div class="card dn">${e.message}<br><span class="mut">İnternet bağlantını kontrol et.</span></div>`; }
   $("scanBtn").disabled = false; setTimeout(() => ($("prog").style.width = 0), 600); render();
@@ -184,7 +192,7 @@ function renderOpp() {
   const L = S.lag; const by = Object.fromEntries(S.results.map((a) => [a.symbol, a]));
   if (!L.leaders.length) { $("opp").innerHTML = '<div class="card">Şu an bu periyotta yükselen lider coin yok; piyasa genel düşüşte. Fırsat analizi yükseliş dönemlerinde anlamlı.</div>'; return; }
   const cands = L.list.filter((x) => x.corr >= 0.5 && x.gap > 0.01 && by[x.symbol] && by[x.symbol].score >= 43);
-  const winTxt = {"15m": "son 24 saat", "1h": "son 24 saat", "4h": "son 24 saat", "1d": "son 3 gün"}[S.tf];
+  const winTxt = {"15m": "son 24 saat", "30m": "son 24 saat", "1h": "son 24 saat", "4h": "son 24 saat", "1d": "son 3 gün"}[S.tf];
   $("opp").innerHTML = `<div class="card"><h3>🚀 Liderler (${winTxt})</h3><div class="row">${L.leaders.map((x) => `<span class="tag" style="font-size:13px">${x.symbol.replace("USDT", "")} <span class="up">${pct(x.ret, 1)}</span></span>`).join("")}</div>
     <div class="why mut sm" style="margin-top:8px">Bu liderlerle geçmişte <b>birlikte hareket eden</b> (korelasyon ≥ 0.5) ama bu yükselişe <b>henüz katılmamış</b> coinler aşağıda. Beklenen hareket = beta × liderlerin ortalama yükselişi. Geride kalma her zaman yetişme anlamına gelmez; skor ve tetikleyicilere de bak.</div></div>` +
     (cands.length ? cands.slice(0, 25).map((x) => { const a = by[x.symbol]; return `<div class="card coin" data-s="${x.symbol}" style="padding:12px">
@@ -215,7 +223,7 @@ async function loadDetail(sym, seq) {
   if (seq !== S.seq) return; // bu arada başka coin açıldı
   const bk = book ? {bids: book.bids.map((x) => [+x[0], +x[1]]), asks: book.asks.map((x) => [+x[0], +x[1]])} : null;
   const trades = tr ? tr.map((x) => ({p: +x.p, q: +x.q, m: x.m, T: x.T})) : null;
-  const a = TA.analyze(k, {htfMs: TFMS[tf] * 4, tfMs: TFMS[tf], oi, gls, tls, funding: perp ? S.perps[sym] : null, book: bk, trades});
+  const a = TA.analyze(k, {htfMs: TFMS[tf] * 4, tfMs: TFMS[tf], oi, gls, tls, funding: perp ? S.perps[sym] : null, book: bk, trades, ...modelOpt(tf)});
   a.symbol = sym; a.tf = tf; a.perp = perp; a.live = S.det && S.det.symbol === sym ? S.det.live : null;
   S.det = a; recordSignal(a, sym, tf, perp); renderDetail();
 }
@@ -328,7 +336,7 @@ function renderDetail() {
     <div class="mut sm" id="liveHL"></div>
     <div class="row between" style="margin-top:10px"><span style="font-size:18px">${badge(a.decision)}</span><span class="big" style="color:${scoreCol(a.score)}">${a.score}<span class="mut" style="font-size:14px">/100</span></span></div>
     <div class="bar" style="height:8px"><i style="width:${a.score}%;background:${scoreCol(a.score)}"></i></div>
-    <div class="mut sm" style="margin-top:6px">Bileşenlerin %${(a.agreement * 100).toFixed(0)}'i aynı yönde${a.coverage < 100 ? ` · Veri kapsamı %${a.coverage} (eksik bileşenler hariç tutuldu)` : ""} · <button id="dRef" style="padding:3px 8px">⟳ Yenile</button></div>
+    <div class="mut sm" style="margin-top:6px">${modelOpt(a.tf).weights ? "🧠 Öğrenilmiş model (" + a.tf + ") · " : "Varsayılan model · "}Bileşenlerin %${(a.agreement * 100).toFixed(0)}'i aynı yönde${a.coverage < 100 ? ` · Veri kapsamı %${a.coverage} (eksik bileşenler hariç tutuldu)` : ""} · <button id="dRef" style="padding:3px 8px">⟳ Yenile</button></div>
   </div>
   <div class="card"><h3>🎯 ATR işlem planı (${isL ? '<span class="up">LONG</span>' : '<span class="dn">SHORT</span>'})</h3>
     <div class="kv"><div><span>Giriş</span><b>${fmt(P.entry)}</b></div><div><span>ATR(14)</span><b>${fmt(a.metrics.atr)}</b></div>
@@ -340,7 +348,7 @@ function renderDetail() {
   <div class="card"><h3>📋 Kararı tetikleyen koşullar</h3>${a.triggers.length ? a.triggers.map((t) => `<div class="trig"><span>${t.dir > 0 ? "🟢" : t.dir < 0 ? "🔴" : "🟡"}</span><span>${t.text}</span></div>`).join("") : '<div class="mut">Belirgin bir tetikleyici yok; piyasa kararsız.</div>'}</div>
   <div class="card"><h3>⚖️ Ağırlıklı skor bileşenleri</h3>${a.components.map((c) => { const w = Math.abs(c.score) * 50, col = c.score > 0.1 ? "var(--up)" : c.score < -0.1 ? "var(--dn)" : "var(--mut)";
     return `<div class="cbar"><span>${c.name} <span class="mut">%${c.weight}</span></span><div class="track"><i style="${c.score >= 0 ? "left:50%" : "right:50%"};width:${w}%;background:${col}"></i></div><b style="color:${col};text-align:right">${c.score > 0 ? "+" : ""}${c.score.toFixed(2)}</b></div>`; }).join("")}
-    <div class="mut sm">Her bileşen −1 (güçlü düşüş) ile +1 (güçlü yükseliş) arasında. Skor = 50 + 50 × ağırlıklı ortalama.</div></div>
+    <div class="mut sm">Her bileşen −1 (güçlü düşüş) ile +1 (güçlü yükseliş) arasında. Skor = 50 + 50 × ağırlıklı ortalama.${modelOpt(a.tf).weights ? " Ağırlıklar geçmiş veriden öğrenildi; negatif ağırlık o göstergenin bu periyotta ters çalıştığını gösterir." : ""}</div></div>
   ${features(a).map((g) => `<div class="card"><h3>${g.title}</h3>${g.items.map((x) => `<div class="feat"><div class="row between"><b>${x.name}</b><b class="${x.cls}">${x.val}</b></div><div class="why">${x.why}</div></div>`).join("")}</div>`).join("")}
   ${a.metrics.whales && a.metrics.whales.list.length ? `<div class="card"><h3>🐋 Son büyük işlemler</h3><table>${a.metrics.whales.list.slice(0, 10).map((x) => `<tr><td>${new Date(x.t).toLocaleTimeString("tr-TR")}</td><td class="${x.side === "AL" ? "up" : "dn"}">${x.side}</td><td>${fmt(x.p)}</td><td>${money(x.val)}</td></tr>`).join("")}</table></div>` : ""}`;
   $("dRef").onclick = () => openDetail(a.symbol);
@@ -404,22 +412,40 @@ function renderSigs() {
     <td class="${s.R > 0 ? "up" : s.R < 0 ? "dn" : "mut"}">${s.st === "done" ? (s.R > 0 ? "+" : "") + s.R : "-"}</td></tr>`).join("")}</table>` : '<div class="mut">Henüz sinyal yok. Tarama veya detay ekranında LONG/SHORT kararı çıkan her coin buraya kaydedilir.</div>';
 }
 
-// ------------------------------------------------ BOT
+// ------------------------------------------------ BOT (8 hesap) + ARAŞTIRMA
+async function rawJson(path) { const r = await fetch(`https://raw.githubusercontent.com/${repoName()}/main/state/${path}?t=${Date.now()}`); if (!r.ok) throw new Error(r.status === 404 ? "henüz oluşmadı" : "HTTP " + r.status); return r.json(); }
 async function loadBot() {
-  const repo = localStorage.getItem("repo") || "malisah61/binancebot"; $("repo").value = repo;
+  $("repo").value = repoName();
   try {
-    const r = await fetch(`https://raw.githubusercontent.com/${repo}/main/state/portfolio.json?t=${Date.now()}`); if (!r.ok) throw new Error(r.status === 404 ? "Bot henüz çalışmadı ya da repo gizli. Telegram'dan /durum yazabilirsin." : "HTTP " + r.status);
-    const pf = await r.json(); const eqs = pf.equity || []; const eq = eqs.length ? last(eqs)[1] : pf.cash; const ch = (eq / pf.start - 1) * 100;
-    const cl = pf.closed || []; const wins = cl.filter((x) => x.pnl > 0).length;
-    $("bSum").innerHTML = `<div class="big" style="color:${ch >= 0 ? "var(--up)" : "var(--dn)"}">${eq.toFixed(2)}$ <small style="font-size:15px">${ch >= 0 ? "+" : ""}${ch.toFixed(2)}%</small></div>
-      <div>Başlangıç ${pf.start}$ · Nakit ${pf.cash.toFixed(2)}$ · Kapanan ${cl.length} · Kazanma %${cl.length ? (wins / cl.length * 100).toFixed(0) : "-"}</div><div class="mut sm">Son güncelleme: ${new Date(pf.updated).toLocaleString("tr-TR")}</div>`;
+    const st = await rawJson("futures.json"); const acc = Object.entries(st.accounts);
+    $("bSum").innerHTML = `<div class="mut sm">Son güncelleme: ${new Date(st.updated).toLocaleString("tr-TR")} · her hesap 1000$ ile başladı, işlem başına varlığın %10'u marj</div>
+      <table style="margin-top:6px"><tr><th>Hesap</th><th>Varlık</th><th>Açık</th><th>İşlem</th><th>Kazanma</th><th>Ort. ROE</th></tr>${acc.map(([k, a]) => { const cl = a.closed, w = cl.filter((x) => x.pnl > 0).length, ch = (a.equity / a.start - 1) * 100, ar = cl.length ? cl.reduce((s, x) => s + x.roe, 0) / cl.length : 0;
+        return `<tr><td><b>${k.replace("_", " ")}</b></td><td class="${ch >= 0 ? "up" : "dn"}">${a.equity.toFixed(0)}$<div class="sm">${ch >= 0 ? "+" : ""}${ch.toFixed(1)}%</div></td><td>${a.positions.length}</td><td>${cl.length}</td><td>${cl.length ? "%" + (w / cl.length * 100).toFixed(0) : "-"}</td><td class="${ar >= 0 ? "up" : "dn"}">${cl.length ? ar.toFixed(1) + "%" : "-"}</td></tr>`; }).join("")}</table>`;
     const cv = $("cEq"), dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = 150; cv.width = w * dpr; cv.height = h * dpr; cv.style.height = h + "px"; const g = cv.getContext("2d"); g.scale(dpr, dpr);
-    if (eqs.length > 1) { const v = eqs.map((x) => x[1]); const mx = Math.max(...v, pf.start), mn = Math.min(...v, pf.start); const Y = (x) => (mx - x) / ((mx - mn) || 1) * (h - 10) + 5;
-      g.strokeStyle = "#2a3542"; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(0, Y(pf.start)); g.lineTo(w, Y(pf.start)); g.stroke(); g.setLineDash([]); g.strokeStyle = ch >= 0 ? "#16c784" : "#ea3943"; g.lineWidth = 1.5; g.beginPath(); v.forEach((x, i) => g.lineTo(i / (v.length - 1) * w, Y(x))); g.stroke(); }
-    const pos = Object.entries(pf.positions || {});
-    $("bPos").innerHTML = pos.length ? `<table><tr><th>Coin</th><th>Giriş</th><th>Stop</th><th>Hedef</th></tr>${pos.map(([s, p]) => `<tr class="sigrow" data-s="${s}"><td><b>${s.replace("USDT", "")}</b></td><td>${fmt(p.entry)}</td><td class="dn">${fmt(p.stop)}</td><td class="up">${fmt(p.tp1_done ? p.tp2 : p.tp1)}</td></tr>`).join("")}</table>` : '<span class="mut">Açık pozisyon yok.</span>';
-    $("bClosed").innerHTML = cl.length ? `<table><tr><th>Coin</th><th>Giriş→Çıkış</th><th>Sonuç</th></tr>${cl.slice(-30).reverse().map((x) => `<tr><td>${x.symbol.replace("USDT", "")}<div class="mut sm">${new Date(x.closed).toLocaleDateString("tr-TR")}</div></td><td>${fmt(x.entry)} → ${fmt(x.exit)}</td><td class="${x.pnl >= 0 ? "up" : "dn"}">${x.pct >= 0 ? "+" : ""}${x.pct}%<br>${x.pnl.toFixed(2)}$</td></tr>`).join("")}</table>` : '<span class="mut">Henüz kapanan işlem yok.</span>';
-  } catch (e) { $("bSum").innerHTML = `<span class="dn">${e.message}</span>`; }
+    const cols = ["#4c9aff", "#2b6cc4", "#16c784", "#0e7a52", "#f0b90b", "#a8800a", "#b48cff", "#7a5cc0"]; let mn = Infinity, mx = -Infinity, t0 = Infinity, t1 = -Infinity;
+    acc.forEach(([, a]) => a.curve.forEach(([t, v]) => { mn = Math.min(mn, v); mx = Math.max(mx, v); t0 = Math.min(t0, t); t1 = Math.max(t1, t); }));
+    if (t1 > t0) { mn = Math.min(mn, 1000); mx = Math.max(mx, 1000); const Y = (v) => (mx - v) / ((mx - mn) || 1) * (h - 20) + 5, X = (t) => (t - t0) / (t1 - t0) * (w - 4) + 2;
+      g.strokeStyle = "#2a3542"; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(0, Y(1000)); g.lineTo(w, Y(1000)); g.stroke(); g.setLineDash([]);
+      acc.forEach(([k, a], i) => { g.strokeStyle = cols[i]; g.lineWidth = 1.3; g.beginPath(); a.curve.forEach(([t, v]) => g.lineTo(X(t), Y(v))); g.stroke(); });
+      g.font = "10px system-ui"; acc.forEach(([k], i) => { g.fillStyle = cols[i]; g.fillText(k, 4 + (i % 4) * (w / 4), h - 3 - (i < 4 ? 10 : 0)); }); }
+    const pos = acc.flatMap(([k, a]) => a.positions.map((p) => ({...p, k})));
+    $("bPos").innerHTML = pos.length ? `<table><tr><th>Coin</th><th>Hesap</th><th>Giriş</th><th>Stop</th><th>Hedef</th></tr>${pos.map((p) => `<tr class="sigrow" data-s="${p.sym}"><td><b class="${p.dir > 0 ? "up" : "dn"}">${p.dir > 0 ? "L" : "S"}</b> ${p.sym.replace("USDT", "")}</td><td class="sm">${p.k.replace("_", " ")}</td><td>${fmt(p.entry)}</td><td class="dn">${fmt(p.stop)}</td><td class="up">${fmt(p.tp1_done ? p.tp2 : p.tp1)}</td></tr>`).join("")}</table>` : '<span class="mut">Açık pozisyon yok.</span>';
+    const cl = acc.flatMap(([k, a]) => a.closed.map((x) => ({...x, k}))).sort((a, b) => b.closed - a.closed).slice(0, 40);
+    $("bClosed").innerHTML = cl.length ? `<table><tr><th>Coin</th><th>Hesap</th><th>Sonuç</th><th>ROE</th></tr>${cl.map((x) => `<tr><td><b class="${x.dir > 0 ? "up" : "dn"}">${x.dir > 0 ? "L" : "S"}</b> ${x.sym.replace("USDT", "")}<div class="mut sm">${new Date(x.closed).toLocaleString("tr-TR", {day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"})}</div></td><td class="sm">${x.k.replace("_", " ")}</td><td class="sm">${x.reason}</td><td class="${x.roe >= 0 ? "up" : "dn"}">${x.roe >= 0 ? "+" : ""}${x.roe}%<div class="sm">${x.pnl >= 0 ? "+" : ""}${x.pnl}$</div></td></tr>`).join("")}</table>` : '<span class="mut">Henüz kapanan işlem yok.</span>';
+  } catch (e) { $("bSum").innerHTML = `<span class="dn">Bot verisi: ${e.message}</span>`; }
+  try {
+    const R = await rawJson("research.json"); const NM = TA.GROUP_NAMES;
+    $("bRes").innerHTML = `<div class="mut sm">${new Date(R.time).toLocaleString("tr-TR")} · ${R.coins.length} coin · ${R.eval_days} gün geçmiş futures verisi · son %30 TEST dönemi</div>` +
+      Object.entries(R.tfs).map(([tf, o]) => { const b5 = o.baseline["5"], b10 = o.baseline["10"], op = o.optimized, ot = op.test["5"], bt = o.baseline_test["5"];
+        const ind = Object.entries(o.indicators_test).filter(([k]) => NM[k]).sort((a, b) => (b[1].ic || 0) - (a[1].ic || 0));
+        return `<div class="feat"><div class="row between"><b>${tf}</b><span class="tag">${op.adopted ? "🧠 yeni model benimsendi" : "mevcut model"}</span></div>
+        <div class="kv" style="margin-top:4px"><div><span class="mut">İşlem</span><b>${b5.n}</b></div><div><span class="mut">Kazanma</span><b>%${b5.win}</b></div>
+        <div><span class="mut">5x ort. ROE</span><b class="${b5.avg_roe >= 0 ? "up" : "dn"}">${b5.avg_roe}%</b></div><div><span class="mut">10x ort. ROE</span><b class="${b10.avg_roe >= 0 ? "up" : "dn"}">${b10.avg_roe}%</b></div>
+        <div><span class="mut">Kâr faktörü</span><b>${b5.pf ?? "-"}</b></div><div><span class="mut">10x likidasyon</span><b>${b10.liq}</b></div></div>
+        <table style="margin-top:6px"><tr><th>Gösterge</th><th>IC</th><th>İsabet</th><th>Aynı yön kazanma</th></tr>${ind.map(([k, e]) => `<tr><td>${NM[k]}</td><td class="${(e.ic || 0) > 0.01 ? "up" : (e.ic || 0) < -0.01 ? "dn" : ""}">${e.ic == null ? "-" : e.ic.toFixed(3)}</td><td>${e.accuracy == null ? "-" : "%" + e.accuracy}</td><td>${e.trade_agree.win == null ? "-" : "%" + e.trade_agree.win}</td></tr>`).join("")}</table>
+        <div class="why">TEST: mevcut model ort. R ${bt.avg_R ?? "-"} (%${bt.win ?? "-"}), yeni (${op.name}, eşik ${op.long_th}/${op.short_th}) ort. R ${ot.avg_R ?? "-"} (%${ot.win ?? "-"})</div></div>`; }).join("") +
+      `<div class="why" style="margin-top:6px">IC: gösterge ile sonraki getiri arasındaki ilişki (0.02–0.05 bile anlamlı; negatif = ters çalışıyor). Geçmiş performans geleceği garanti etmez.</div>`;
+  } catch (e) { $("bRes").innerHTML = `<span class="mut">Araştırma raporu ${e.message}. GitHub'da Actions → "V5 araştırma" çalışınca burada görünür.</span>`; }
 }
 
 // ------------------------------------------------ gezinme
@@ -439,7 +465,7 @@ $("filt").onclick = (e) => { const c = e.target.closest(".chip"); if (!c) return
 const openFrom = (e) => { const c = e.target.closest("[data-s]"); if (c) openDetail(c.dataset.s); };
 $("list").onclick = openFrom; $("opp").onclick = openFrom; $("sigList").onclick = openFrom; $("bPos").onclick = openFrom;
 $("sigVal").onclick = validate; $("sigClr").onclick = () => { if (confirm("Tüm sinyal kaydı silinsin mi?")) { saveSigs([]); renderSigs(); } };
-$("repoSave").onclick = () => { localStorage.setItem("repo", $("repo").value.trim()); loadBot(); };
+$("repoSave").onclick = () => { localStorage.setItem("repo", $("repo").value.trim()); loadModel(); loadBot(); };
 try { const ls = JSON.parse(localStorage.getItem("lastScan5")); if (ls && Date.now() - ls.time < 6 * 3600e3) { S.results = ls.results; S.futOk = ls.futOk; $("tf").value = ls.tf; S.tf = ls.tf; $("hdrInfo").textContent = new Date(ls.time).toLocaleTimeString("tr-TR", {hour: "2-digit", minute: "2-digit"}) + " · " + ls.tf + " (kayıtlı)"; render(); } } catch (e) {}
 </script>
 </body>

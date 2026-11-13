@@ -11,7 +11,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 14
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -21,12 +21,12 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python bot/bot.py
+        run: python bot/fbot.py
       - name: Durumu kaydet
         run: |
           git config user.name "kripto-bot"
           git config user.email "kripto-bot@users.noreply.github.com"
-          git add state
+          git add state/futures.json state/portfolio.json 2>/dev/null; git add state
           git diff --cached --quiet && exit 0
           git commit -m "bot: durum $(date -u +%Y-%m-%dT%H:%MZ)" -q
           for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done

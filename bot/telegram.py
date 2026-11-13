@@ -25,7 +25,12 @@ def _call(method, **kw):
 def updates(offset=None):
     if not TOKEN:
         return []
-    return _call("getUpdates", offset=offset or "", timeout=0).get("result", [])
+    r = _call("getUpdates", offset=offset or "", timeout=0)
+    if not r.get("ok"):
+        print("telegram getUpdates cevap:", {k: v for k, v in r.items() if k != "result"})
+    else:
+        print(f"telegram: {len(r['result'])} yeni mesaj")
+    return r.get("result", [])
 
 
 def send(chat_id, text):

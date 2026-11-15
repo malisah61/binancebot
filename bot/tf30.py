@@ -27,7 +27,12 @@ import telegram  # noqa: E402
 import v5  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TF = "30m"
+TF = os.environ.get("EX_TF", "30m")
+BPD = 86_400_000 // v5.TF_MS[TF]                       # günde mum
+TFH = v5.TF_MS[TF] / 3_600_000                          # mum saat
+TAG = {"30m": "30dk", "2h": "2s", "1h": "1s", "4h": "4s"}.get(TF, TF)
+EV_TH = (0.05, 0.08, 0.12) if TFH <= 0.5 else (0.08, 0.12, 0.20)
+research.MAX_HOLD.setdefault(TF, int(72 / TFH) if TFH >= 1 else 96)
 N = int(os.environ.get("EX30_COINS", 50))
 DAYS = int(os.environ.get("EX30_DAYS", 365))
 WARM = 45
@@ -50,12 +55,12 @@ def jobs(sym, today):
     out = []
     while m < cur:
         ym = m.strftime("%Y-%m")
-        out.append(("k", f"{B}/monthly/klines/{sym}/30m/{sym}-30m-{ym}.zip", f"{C}/k30/{sym}/{ym}.zip", False))
+        out.append(("k", f"{B}/monthly/klines/{sym}/{TF}/{sym}-{TF}-{ym}.zip", f"{C}/k{TF}/{sym}/{ym}.zip", False))
         out.append(("f", f"{B}/monthly/fundingRate/{sym}/{sym}-fundingRate-{ym}.zip", f"{C}/f/{sym}/{ym}.zip", False))
         m = (m + timedelta(days=32)).replace(day=1)
     d = cur
     while d < today:
-        out.append(("k", f"{B}/daily/klines/{sym}/30m/{sym}-30m-{d:%Y-%m-%d}.zip", f"{C}/k30d/{sym}/{d:%Y-%m-%d}.zip", (today - d).days <= 3))
+        out.append(("k", f"{B}/daily/klines/{sym}/{TF}/{sym}-{TF}-{d:%Y-%m-%d}.zip", f"{C}/k{TF}d/{sym}/{d:%Y-%m-%d}.zip", (today - d).days <= 3))
         d += timedelta(days=1)
     return out
 
@@ -74,7 +79,7 @@ def load(today):
     raw = {}
     for s in syms:
         r = research.load_coin(s, per[s])
-        if r is None or len(r[0]) < 3000:
+        if r is None or len(r[0]) < BPD * 120:
             continue
         raw[s] = r
         if len(raw) >= N + 1:
@@ -84,7 +89,7 @@ def load(today):
 
 def btc_maps(btc_df, btc_R):
     c = btc_df["c"].values.astype(float)
-    r30 = np.r_[np.full(1440, np.nan), c[1440:] / c[:-1440] - 1]
+    r30 = np.r_[np.full(30 * BPD, np.nan), c[30 * BPD:] / c[:-30 * BPD] - 1]
     return dict(zip(btc_df["t"].values, r30)), dict(zip(btc_df["t"].values, np.sign(np.nan_to_num(btc_R["f_htf"].values.astype(float)))))
 
 
@@ -157,7 +162,8 @@ def score_rules(strat):
 def event_trades(coins, b30):
     """30dk sert hareketler (6 saatte ≥ eşik): aynı yönde Fib geri çekilmesine limit veya ters yöne piyasa girişi."""
     import extreme as X
-    X.FIB_WAIT = 24                      # 12 saat (24 mum) bekler
+    X.FIB_WAIT = max(6, int(12 / TFH))    # 12 saat bekler
+    win_h = int(12 * TFH)                   # pencere: 12 mum
     cost = X.FEE + 2 * X.SLIP["büyük"]
     res = {}
     for s, (df, R, fm) in coins.items():
@@ -167,10 +173,10 @@ def event_trades(coins, b30):
         hi, lo = X.roll_max(h, 12), X.roll_min(l, 12)
         dn, up = c / hi - 1, c / lo - 1
         fu = df["funding"].values.astype(float) if "funding" in df else np.zeros(len(c))
-        for th in (0.05, 0.08, 0.12):
+        for th in EV_TH:
             last = -10 ** 9
             for i in np.flatnonzero(((dn <= -th) & (np.r_[0, dn[:-1]] > -th)) | ((up >= th) & (np.r_[0, up[:-1]] < th))):
-                if i < 1500 or i - last < 24 or i >= len(c) - 2:
+                if i < 31 * BPD or i - last < 12 or i >= len(c) - 2:
                     continue
                 last = i
                 ev = "crash" if dn[i] <= -th else "pump"
@@ -186,7 +192,7 @@ def event_trades(coins, b30):
                         if p is None:
                             continue
                         e, sp, mode, _ = p
-                    r = X.sim(o, h, l, c, i, d, e, sp, mode, cost, float(np.nan_to_num(fu[i])) / 1.0, hold=72)
+                    r = X.sim(o, h, l, c, i, d, e, sp, mode, cost, float(np.nan_to_num(fu[i])) * TFH, hold=int(36 / TFH))
                     if not r.get("filled"):
                         continue
                     tr = {"sym": s, "t": int(t[min(r["start"], len(t) - 1)]), "t_exit": int(t[min(r["start"] + r["bars"] - 1, len(t) - 1)]),
@@ -195,7 +201,7 @@ def event_trades(coins, b30):
                         if rg == "btc" and not ((d > 0 and r30 > 0) or (d < 0 and r30 < 0)):
                             continue
                         key = f"B_{ev}_{name}_{int(th*100)}_{rg}"
-                        desc = (f"6 saatte %{int(th*100)}+ {'düşüş' if ev == 'crash' else 'yükseliş'} → {X.VARIANTS[ev][name][2] if 'f' in name else ('ters yöne hemen giriş')}"
+                        desc = (f"{win_h} saatte %{int(th*100)}+ {'düşüş' if ev == 'crash' else 'yükseliş'} → {X.VARIANTS[ev][name][2] if 'f' in name else ('ters yöne hemen giriş')}"
                                 f"{', BTC 30g yönünde' if rg == 'btc' else ''}")
                         res.setdefault(key, [desc, []])[1].append(tr)
     return res
@@ -245,6 +251,8 @@ def analyze(raw, today):
     split = int((today - timedelta(days=DAYS * 0.3)).timestamp() * 1000)
     import fbot
     w, strat, sname, _ = fbot.model_for(TF)
+    if strat.get("max_new", 99) >= 99:
+        strat = dict(strat, max_new=3)
     coins, scores = {}, {}
     for s, (k, met, fund) in raw.items():
         df = research.with_extras(k.copy(), TF, None, fund)
@@ -281,8 +289,8 @@ def fs2(s):
 def to_md(r):
     d = datetime.fromtimestamp(r["time"] / 1000, timezone.utc) + timedelta(hours=3)
     sp = datetime.fromtimestamp(r["split"] / 1000, timezone.utc)
-    L = [f"# 30 dakikalık bot — 1 yıllık test ({d:%d.%m.%Y})", "",
-         f"{r['coins']} coin, son {r['days']} gün, 30dk mum, 3x kaldıraç (komisyon + funding dahil). Strateji: {r['strategy']}. "
+    L = [f"# {TAG} grafik — 1 yıllık test ({d:%d.%m.%Y})", "",
+         f"{r['coins']} coin, son {r['days']} gün, {TAG} mum, 3x kaldıraç (komisyon + funding dahil). Strateji: {r['strategy']}. "
          f"Eğitim → {sp:%d.%m.%Y} → TEST.", "",
          "## İşlem bazında", "", "| Varyant | Eğitim | TEST |", "|---|---|---|"]
     for k, v in r["variants"].items():
@@ -321,10 +329,10 @@ def main():
     raw = load(today)
     print(f"{len(raw)} coin yüklendi ({time.time()-t0:.0f} sn)")
     r = analyze(raw, today)
-    json.dump(r, open(os.path.join(ROOT, "state", "tf30.json"), "w"), ensure_ascii=False, default=float)
+    json.dump(r, open(os.path.join(ROOT, "state", f"tf{TF}.json"), "w"), ensure_ascii=False, default=float)
     md = to_md(r)
     os.makedirs(os.path.join(ROOT, "docs", "arastirma"), exist_ok=True)
-    open(os.path.join(ROOT, "docs", "arastirma", f"30dk-1yil-{(today + timedelta(hours=3)):%Y-%m-%d}.md"), "w", encoding="utf-8").write(md)
+    open(os.path.join(ROOT, "docs", "arastirma", f"{TAG}-1yil-{(today + timedelta(hours=3)):%Y-%m-%d}.md"), "w", encoding="utf-8").write(md)
     print(md)
     import notify
     chat = os.environ.get("TELEGRAM_CHAT_ID") or json.load(open(os.path.join(ROOT, "state", "futures.json"))).get("chat_id")

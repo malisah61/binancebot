@@ -41,7 +41,7 @@ CACHE = os.path.join(ROOT, "data", "cache", "ext")
 FUT = "https://data.binance.vision/data/futures/um"
 SPOT = "https://data.binance.vision/data/spot"
 N_COINS = int(os.environ.get("EX_COINS", 300))
-DAYS = int(os.environ.get("EX_DAYS", 150))
+DAYS = int(os.environ.get("EX_DAYS", 365))
 MET_DAYS = int(os.environ.get("EX_MET_DAYS", 60))
 HOLD, WAIT, COOL = 72, 12, 48
 FEE = 0.0010
@@ -72,7 +72,7 @@ VARIANTS = {
 EVENT_NAME = {"crash": "Sert düşüş", "ctpump": "Trend tersi sert yükseliş"}
 FEATS = {"size": "Hareket büyüklüğü %", "ext_atr": "Hareket / ATR", "rvol24": "Son 24s hacim / önceki 7g ort.",
          "taker24": "Son 24s agresif alım oranı", "ret30": "30 günlük getiri %", "btc24": "BTC son 24s %",
-         "wick": "Olay mumunun ters fitil oranı", "rank": "Hacim sırası (büyük = küçük coin)", "oi24": "OI değişimi 24s %",
+         "wick": "Olay mumunun ters fitil oranı", "btc30": "BTC son 30g %", "rank": "Hacim sırası (büyük = küçük coin)", "oi24": "OI değişimi 24s %",
          "fund": "Funding", "tls": "Top trader L/S"}
 
 
@@ -144,6 +144,8 @@ def load_all(today):
             r = research.load_coin(s, per.get(s, []))
             if r is not None and len(r[0]) >= 800:
                 data[s] = (r[0], "spot")
+    vol = {s: float(k[0]["qv"].tail(24 * 90).sum()) for s, k in data.items()}     # katman: son 90 günün hacmi (anlık patlamadan etkilenmez)
+    rank = {s: i + 1 for i, s in enumerate(sorted(vol, key=vol.get, reverse=True))}
     print(f"{len(syms)} coin istendi, {len(data)} yüklendi ({sum(1 for v in data.values() if v[1] == 'spot')} yalnız spot)")
     return data, rank
 
@@ -169,7 +171,10 @@ def roll_min(x, n):
 
 def btc_ret24(k):
     c = k["c"].values.astype(float)
-    return dict(zip(k["t"].values, np.r_[np.full(24, np.nan), (c[24:] / c[:-24] - 1) * 100]))
+    t = k["t"].values
+    m = dict(zip(t, np.r_[np.full(24, np.nan), (c[24:] / c[:-24] - 1) * 100]))
+    m.update({("30", x): v for x, v in zip(t, np.r_[np.full(720, np.nan), (c[720:] / c[:-720] - 1) * 100])})
+    return m
 
 
 # ---------------------------------------------------------------- işlem simülasyonu
@@ -308,6 +313,7 @@ def events(sym, k, market, rank, btc=None, label=True):
                  "rvol24": float(v24[i] / max(v7[i], 1e-9)) if v7[i] == v7[i] else np.nan, "taker24": float(tk24[i]),
                  "ret30": float((c[i] / c[i - 720] - 1) * 100), "wick": float(wick),
                  "btc24": float(btc.get(t[i], np.nan)) if btc else np.nan,
+                 "btc30": float(btc.get(("30", t[i]), np.nan)) if btc else np.nan,
                  "oi24": float((oi[i] / oi[i - 24] - 1) * 100) if oi[i] == oi[i] and oi[i - 24] == oi[i - 24] and oi[i - 24] > 0 else np.nan,
                  "fund": float(fu[i]) if fu[i] == fu[i] else np.nan, "tls": float(tls[i]) if tls[i] == tls[i] else np.nan,
                  "atr": float(a[i]), "lo24": float(lo24[i]), "hi24": float(hi24[i])}
@@ -342,8 +348,13 @@ def stats(trades):
     return res
 
 
-def collect(E, ev, name, lo, mask=None):
+REGIMES = {"tümü": None, "BTC düşüşte": lambda D: D["btc30"] < 0, "BTC yükselişte": lambda D: D["btc30"] >= 0}
+
+
+def collect(E, ev, name, lo, mask=None, regime="tümü"):
     D = E[(E["ev"] == ev) & (E["th"] == lo)]
+    if REGIMES.get(regime) is not None and "btc30" in D:
+        D = D[REGIMES[regime](D)]
     if mask is not None:
         D = D[mask(D)]
     if name not in D:
@@ -360,9 +371,10 @@ def grid(E, split):
             for th in ths:
                 for tiers in (None, ("küçük",), ("orta", "küçük"), ("büyük",)):
                     mk = (lambda D, tiers=tiers: D["tier"].isin(tiers)) if tiers else None
-                    a, b = stats(collect(tr, ev, name, th, mk)), stats(collect(te, ev, name, th, mk))
-                    res.append({"ev": ev, "name": name, "desc": desc, "th": th, "tiers": list(tiers) if tiers else ["tümü"],
-                                "train": a, "test": b})
+                    for rg in REGIMES:
+                        a, b = stats(collect(tr, ev, name, th, mk, rg)), stats(collect(te, ev, name, th, mk, rg))
+                        res.append({"ev": ev, "name": name, "desc": desc, "th": th, "tiers": list(tiers) if tiers else ["tümü"],
+                                    "regime": rg, "train": a, "test": b})
     return res
 
 
@@ -373,14 +385,16 @@ def adopt(row):
 
 def choose(G, ev):
     """Eğitimde en iyi (n≥40) — test sonucuna bakılmadan seçilir."""
-    cand = [g for g in G if g["ev"] == ev and g["train"].get("n", 0) >= 40]
+    cand = [g for g in G if g["ev"] == ev and g["train"].get("n", 0) >= 100]   # küçük alt kümeler şansla öne çıkmasın
     cand.sort(key=lambda g: g["train"]["avg_R"], reverse=True)
     return cand[0] if cand else None
 
 
-def compare(E, split, ev, name, th):
+def compare(E, split, ev, name, th, regime="tümü"):
     """Seçilen varyantta kazanan vs kaybeden işlemlerin özellik farkı (Cohen d, eğitim ve test ayrı)."""
     D = E[(E["ev"] == ev) & (E["th"] == th)].copy()
+    if REGIMES.get(regime) is not None:
+        D = D[REGIMES[regime](D)]
     D = D[D[name].apply(lambda x: isinstance(x, dict))]
     if len(D) < 30:
         return []
@@ -404,9 +418,17 @@ def compare(E, split, ev, name, th):
 
 
 # ---------------------------------------------------------------- canlı tarama + kâğıt ileri test
-def live_scan(picks):
+def live_scan(picks, rank_hist=None):
     rows = binance.top_usdt(N_COINS)
     rank = {x["symbol"]: i + 1 for i, x in enumerate(rows)}
+    if rank_hist:
+        rank = {s: rank_hist.get(s, r) for s, r in rank.items()}
+    try:
+        bk = pd.DataFrame(binance.klines("BTCUSDT", "1h", 1000))
+        btc30 = float(bk["c"].iloc[-1] / bk["c"].iloc[-721] - 1) * 100
+    except Exception:
+        btc30 = float("nan")
+    reg_now = "BTC düşüşte" if btc30 < 0 else "BTC yükselişte"
 
     def one(s):
         try:
@@ -427,7 +449,7 @@ def live_scan(picks):
             p = picks.get(e["ev"])
             e["hours_ago"] = int((now - e["t"]) / 3600_000)
             e["pick"] = None
-            if p and e["th"] == p["th"] and ("tümü" in p["tiers"] or e["tier"] in p["tiers"]):
+            if p and e["th"] == p["th"] and ("tümü" in p["tiers"] or e["tier"] in p["tiers"]) and p["regime"] in ("tümü", reg_now):
                 d, mode, desc = VARIANTS[e["ev"]][p["name"]]
                 e["pick"] = {"name": p["name"], "desc": desc, "dir": "LONG" if d == 1 else "SHORT"}
             found.append({q: (None if isinstance(v, float) and v != v else v) for q, v in e.items()})
@@ -438,7 +460,7 @@ def live_scan(picks):
         if cur is None or (bool(x["pick"]), x["th"]) > (bool(cur["pick"]), cur["th"]):
             best[key] = x
     found = sorted(best.values(), key=lambda x: -x["size"])
-    return found
+    return found, {"btc30": round(btc30, 1), "regime": reg_now}
 
 
 def ledger_update(scan, picks):
@@ -491,20 +513,29 @@ def to_md(r):
     for ev in VARIANTS:
         L += [f"## {EVENT_NAME[ev]} — varyantlar (tüm coinler, en düşük eşik)", "", "| Varyant | Eğitim | TEST |", "|---|---|---|"]
         for g in r["grid"]:
-            if g["ev"] == ev and g["th"] == (DROPS if ev == "crash" else PUMPS)[0] and g["tiers"] == ["tümü"]:
+            if g["ev"] == ev and g["th"] == (DROPS if ev == "crash" else PUMPS)[0] and g["tiers"] == ["tümü"] and g["regime"] == "tümü":
                 L.append(f"| {g['desc']} | {fmt_st(g['train'])} | {fmt_st(g['test'])} |")
         L += ["", f"### {EVENT_NAME[ev]} — coin büyüklüğüne göre (TEST, en düşük eşik)", "", "| Varyant | büyük | orta+küçük | küçük |", "|---|---|---|---|"]
         for name in VARIANTS[ev]:
             cells = []
             for tiers in (["büyük"], ["orta", "küçük"], ["küçük"]):
-                g = next((g for g in r["grid"] if g["ev"] == ev and g["name"] == name and g["th"] == (DROPS if ev == "crash" else PUMPS)[0] and g["tiers"] == tiers), None)
+                g = next((g for g in r["grid"] if g["ev"] == ev and g["name"] == name and g["th"] == (DROPS if ev == "crash" else PUMPS)[0] and g["tiers"] == tiers and g["regime"] == "tümü"), None)
                 s = g["test"] if g else {}
                 cells.append(f"{s['n']} işl, ort {s['avg_R']}R, PF {s['pf']}" if s.get("n") else "-")
+            L.append(f"| {VARIANTS[ev][name][2]} | " + " | ".join(cells) + " |")
+        sh = lambda s: f"{s['n']} işl, ort {s['avg_R']}R, PF {s['pf']}" if s.get("n") else "-"
+        L += ["", f"### {EVENT_NAME[ev]} — piyasa rejimine göre (BTC 30 günlük yönü, tüm coinler, en düşük eşik)", "",
+              "| Varyant | BTC düşüşte: eğitim | BTC düşüşte: TEST | BTC yükselişte: eğitim | BTC yükselişte: TEST |", "|---|---|---|---|---|"]
+        for name in VARIANTS[ev]:
+            cells = []
+            for rg in ("BTC düşüşte", "BTC yükselişte"):
+                g = next((g for g in r["grid"] if g["ev"] == ev and g["name"] == name and g["th"] == (DROPS if ev == "crash" else PUMPS)[0] and g["tiers"] == ["tümü"] and g["regime"] == rg), None)
+                cells += [sh(g["train"]) if g else "-", sh(g["test"]) if g else "-"]
             L.append(f"| {VARIANTS[ev][name][2]} | " + " | ".join(cells) + " |")
         p = r["picks"].get(ev)
         if p:
             st = "✅ DOĞRULANDI" if p["adopted"] else "❌ testte tutmadı → yalnız kâğıt ileri test"
-            L += ["", f"**Eğitimde seçilen:** {p['desc']}, hareket ≥ %{int(p['th']*100)}, coinler: {', '.join(p['tiers'])} → {st}",
+            L += ["", f"**Eğitimde seçilen:** {p['desc']}, hareket ≥ %{int(p['th']*100)}, coinler: {', '.join(p['tiers'])}, piyasa: {p['regime']} → {st}",
                   f"- Eğitim: {fmt_st(p['train'])}", f"- TEST: {fmt_st(p['test'])}"]
             cmp_ = r["compare"].get(ev) or []
             if cmp_:
@@ -515,8 +546,10 @@ def to_md(r):
         L.append("")
     good = [g for g in r["grid"] if g["adopt"]]
     L += ["## Testi geçen tüm kombinasyonlar (bilgi amaçlı — eğitimde seçilmedikçe benimsenmez)", ""]
-    L += [f"- {EVENT_NAME[g['ev']]} · {g['desc']} · ≥%{int(g['th']*100)} · {', '.join(g['tiers'])} · TEST {fmt_st(g['test'])}" for g in good[:12]] or ["- Yok."]
-    L += ["", "## Şu an (son 26 saat)", ""]
+    good.sort(key=lambda g: -(g["test"].get("avg_R") or 0) * min(g["test"]["n"], 200))
+    L += [f"- {EVENT_NAME[g['ev']]} · {g['desc']} · ≥%{int(g['th']*100)} · {', '.join(g['tiers'])} · {g['regime']} · eğitim ort {g['train']['avg_R']}R (n {g['train']['n']}) · TEST {fmt_st(g['test'])}" for g in good[:15]] or ["- Yok."]
+    rn = r.get("regime_now") or {}
+    L += ["", f"## Şu an (son 26 saat) — piyasa: {rn.get('regime', '?')} (BTC 30g %{rn.get('btc30', '?')})", ""]
     for x in r["scan"][:20]:
         pk = f" → kâğıt: {x['pick']['dir']} ({x['pick']['desc']})" if x.get("pick") else ""
         L.append(f"- {x['sym'].replace('USDT','')} [{x['tier']}] {EVENT_NAME[x['ev']]} %{x['size']:.1f}, {x['hours_ago']} saat önce, RVOL {x['rvol24'] if x['rvol24'] is None else round(x['rvol24'],2)}{pk}")
@@ -544,7 +577,7 @@ def analyze(data, rank, btc=None):
         p = choose(G, ev)
         if p:
             picks[ev] = {**p, "adopted": adopt(p)}
-            cmps[ev] = compare(E, split, ev, p["name"], p["th"])
+            cmps[ev] = compare(E, split, ev, p["name"], p["th"], p["regime"])
     return E, split, G, picks, cmps
 
 
@@ -556,7 +589,7 @@ def main():
     E, split, G, picks, cmps = analyze(data, rank, btc)
     E = E[E["t"] >= (today - timedelta(days=DAYS)).timestamp() * 1000]
     print(f"{len(E)} olay ({time.time()-t0:.0f} sn)")
-    scan = live_scan(picks)
+    scan, regime_now = live_scan(picks, rank)
     try:
         ledger = ledger_update(scan, picks)
     except Exception as e:
@@ -564,7 +597,7 @@ def main():
         ledger = None
     rep = {"time": int(time.time() * 1000), "coins": len(data), "split": int(split),
            "n_events": {ev: int(((E["ev"] == ev) & (E["th"] == (DROPS if ev == "crash" else PUMPS)[0])).sum()) for ev in VARIANTS}, "grid": G, "picks": picks, "compare": cmps,
-           "scan": scan, "ledger": ledger}
+           "scan": scan, "regime_now": regime_now, "ledger": ledger}
     json.dump(rep, open(os.path.join(ROOT, "state", "extreme.json"), "w"), ensure_ascii=False, default=float)
     md = to_md(rep)
     path = f"docs/gunluk/uc-hareket-{(today + timedelta(hours=3)):%Y-%m-%d}.md"

@@ -34,7 +34,8 @@ N = int(os.environ.get("N", 40))
 for label, bounce in (("rastgele", False), ("tepkili", True)):
     data = {f"S{i}USDT": (series(i, bounce=bounce), "fut") for i in range(N)}
     rank = {s: 10 + i * 6 for i, s in enumerate(data)}
-    E, split, G, picks, cmps = X.analyze(data, rank)
+    btc = X.btc_ret24(series(999))
+    E, split, G, picks, cmps = X.analyze(data, rank, btc)
     ad = [g for g in G if g["adopt"]]
     print(label, "olay", len(E), "seçimler", {k: (v["name"], v["th"], v["tiers"], v["train"]["avg_R"], v["test"].get("avg_R"), v["adopted"]) for k, v in picks.items()},
           "testi geçen kombinasyon", len(ad))
@@ -43,6 +44,6 @@ for label, bounce in (("rastgele", False), ("tepkili", True)):
     else:
         assert picks["crash"]["name"].startswith("L"), picks["crash"]
 md = X.to_md({"time": int(time.time()*1000), "coins": N, "split": int(split), "n_events": {"crash": 1, "ctpump": 1}, "grid": G,
-              "picks": picks, "compare": cmps, "scan": [], "ledger": None})
+              "picks": picks, "compare": cmps, "scan": [], "ledger": None, "regime_now": {"regime": "BTC düşüşte", "btc30": -5}})
 assert "Sert düşüş" in md
 print("UÇ HAREKET TESTİ GEÇTİ")

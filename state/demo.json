@@ -921,11 +921,15 @@
   [
    1794758137091,
    4973.57
+  ],
+  [
+   1794759037586,
+   4973.31
   ]
  ],
  "errors": [],
  "halted": false,
- "equity": 4973.57,
+ "equity": 4973.31,
  "pending": {},
  "no_edge_note": false
 }

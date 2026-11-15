@@ -8,6 +8,7 @@
 |---|---|---|---|---|---|
 | BTC son 24s % | 0.322 | -0.316 | +0.48 | -0.12 | ✗ |
 | Stop mesafesi % | 3.869 | 3.946 | +0.41 | -0.12 | ✗ |
+| Top trader L/S | 2.087 | 2.244 | -0.30 | -0.32 | ✓ |
 | BTC son 7g % | -1.652 | -1.834 | +0.26 | +0.01 | ✗ |
 | Agresif alım değişimi (24s - önceki 72s) | -0.006 | -0.009 | +0.24 | +0.35 | ✓ |
 | RSI(14s) tetikte | 50.277 | 47.296 | +0.23 | -0.42 | ✗ |
@@ -16,10 +17,9 @@
 | Dipten bu yana saat | 5.0 | 4.0 | +0.16 | -0.55 | ✗ |
 | Son 24s hacim / önceki 7g ort. | 1.055 | 1.073 | +0.09 | -0.30 | ✗ |
 | Funding (son) | 0.005 | 0.002 | +0.08 | None | ✗ |
+| OI değişimi son 24s % | -2.409 | -3.276 | +0.07 | -0.24 | ✗ |
 | 30 günlük tepeden düşüş % | -29.238 | -30.457 | +0.06 | -0.97 | ✗ |
-| RSI pozitif uyumsuzluk (dip daha alçak, RSI daha yüksek) | 0.0 | 0.0 | -0.04 | -0.30 | ✗ |
-| Dibe son 24s'te düşüş % | -6.847 | -7.784 | -0.02 | -0.17 | ✗ |
-| Dip mumunun alt fitil oranı | 0.412 | 0.436 | +0.02 | -0.40 | ✗ |
+| Global L/S | 1.144 | 1.081 | -0.04 | +0.04 | ✗ |
 
 Etki: standart fark (+ = başarılı dönüşlerde daha yüksek). Kalıcı ✓: eğitim ve test döneminde aynı yönde ve belirgin.
 
@@ -47,18 +47,18 @@ Karar: ❌ hiçbir kural TEST dönemini yeterince geçemedi; kâğıt hesapta il
 
 ## Son 120 günün en büyük dipten dönüşleri
 
-- BMT 18.10.2026 20:00: dipten +%216.5 (öncesinde 30g tepeden %-29.2, RVOL 0.76, OI 72s %None, funding 0.005)
-- SHELL 13.11.2026 03:00: dipten +%172.5 (öncesinde 30g tepeden %-34.9, RVOL 1.36, OI 72s %None, funding None)
-- SHELL 08.11.2026 21:00: dipten +%165.9 (öncesinde 30g tepeden %-33.2, RVOL 0.69, OI 72s %None, funding None)
-- ONE 05.11.2026 15:00: dipten +%141.5 (öncesinde 30g tepeden %-56.0, RVOL 1.39, OI 72s %None, funding None)
+- BMT 18.10.2026 20:00: dipten +%216.5 (öncesinde 30g tepeden %-29.2, RVOL 0.76, OI 72s %-8.8, funding 0.005)
+- SHELL 13.11.2026 03:00: dipten +%172.5 (öncesinde 30g tepeden %-34.9, RVOL 1.36, OI 72s %-4.9, funding None)
+- SHELL 08.11.2026 21:00: dipten +%165.9 (öncesinde 30g tepeden %-33.2, RVOL 0.69, OI 72s %-0.9, funding None)
+- ONE 05.11.2026 15:00: dipten +%141.5 (öncesinde 30g tepeden %-56.0, RVOL 1.39, OI 72s %-16.2, funding None)
 - HOME 30.07.2026 17:00: dipten +%139.8 (öncesinde 30g tepeden %-73.3, RVOL 0.68, OI 72s %None, funding 0.005)
-- ONE 03.11.2026 03:00: dipten +%130.2 (öncesinde 30g tepeden %-55.8, RVOL 0.79, OI 72s %None, funding None)
-- SOPH 08.11.2026 21:00: dipten +%123.4 (öncesinde 30g tepeden %-69.4, RVOL 0.61, OI 72s %None, funding None)
+- ONE 03.11.2026 03:00: dipten +%130.2 (öncesinde 30g tepeden %-55.8, RVOL 0.79, OI 72s %-2.2, funding None)
+- SOPH 08.11.2026 21:00: dipten +%123.4 (öncesinde 30g tepeden %-69.4, RVOL 0.61, OI 72s %-3.0, funding None)
 - ERA 19.07.2026 14:00: dipten +%122.1 (öncesinde 30g tepeden %-34.6, RVOL 1.39, OI 72s %None, funding -0.0)
-- LSK 25.10.2026 08:00: dipten +%98.2 (öncesinde 30g tepeden %-57.0, RVOL 1.4, OI 72s %None, funding 0.0047)
-- BARD 10.11.2026 13:00: dipten +%91.8 (öncesinde 30g tepeden %-28.4, RVOL 2.78, OI 72s %None, funding None)
-- ALLO 16.09.2026 17:00: dipten +%82.0 (öncesinde 30g tepeden %-40.8, RVOL 0.71, OI 72s %None, funding 0.005)
-- SOPH 26.10.2026 10:00: dipten +%81.9 (öncesinde 30g tepeden %-66.0, RVOL 0.51, OI 72s %None, funding -0.164)
+- LSK 25.10.2026 08:00: dipten +%98.2 (öncesinde 30g tepeden %-57.0, RVOL 1.4, OI 72s %-14.8, funding 0.0047)
+- BARD 10.11.2026 13:00: dipten +%91.8 (öncesinde 30g tepeden %-28.4, RVOL 2.78, OI 72s %-13.2, funding None)
+- ALLO 16.09.2026 17:00: dipten +%82.0 (öncesinde 30g tepeden %-40.8, RVOL 0.71, OI 72s %-10.9, funding 0.005)
+- SOPH 26.10.2026 10:00: dipten +%81.9 (öncesinde 30g tepeden %-66.0, RVOL 0.51, OI 72s %-37.1, funding -0.164)
 
 ## Şu an dipten dönen coinler (son 48 saat)
 
@@ -103,8 +103,8 @@ Karar: ❌ hiçbir kural TEST dönemini yeterince geçemedi; kâğıt hesapta il
 - EIGEN: dip 0.1246, şimdi 0.1328 (8 saat önce tetik), 30g düşüş %-55.8, RVOL 2.47
 - CRV: dip 0.1959, şimdi 0.2072 (8 saat önce tetik), 30g düşüş %-52.2, RVOL 1.83
 - ETC: dip 5.62, şimdi 5.83 (8 saat önce tetik), 30g düşüş %-31.5, RVOL 1.51
-- PLUME: dip 0.01152, şimdi 0.01252 (8 saat önce tetik), 30g düşüş %-45.4, RVOL 1.56
 - ZK: dip 0.00742, şimdi 0.00791 (8 saat önce tetik), 30g düşüş %-60.6, RVOL 2.08
+- PLUME: dip 0.01152, şimdi 0.01252 (8 saat önce tetik), 30g düşüş %-45.4, RVOL 1.56
 - STX: dip 0.2531, şimdi 0.2629 (8 saat önce tetik), 30g düşüş %-41.9, RVOL 1.66
 - ATOM: dip 1.218, şimdi 1.28 (8 saat önce tetik), 30g düşüş %-33.0, RVOL 1.72
 - LDO: dip 0.2556, şimdi 0.2686 (8 saat önce tetik), 30g düşüş %-39.1, RVOL 1.6

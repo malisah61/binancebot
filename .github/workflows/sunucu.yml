@@ -1,0 +1,28 @@
+name: Sunucu (Hetzner)
+on:
+  workflow_dispatch:
+    inputs:
+      adim:
+        description: "ip = IP ayır · kur = sunucuyu kur · sil = sunucuyu sil"
+        required: true
+        default: ip
+        type: choice
+        options: [ip, kur, sil]
+permissions:
+  contents: read
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -q requests
+      - name: Hetzner
+        env:
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+          BINANCE_REAL_KEY: ${{ secrets.BINANCE_REAL_KEY }}
+          BINANCE_REAL_SECRET: ${{ secrets.BINANCE_REAL_SECRET }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python server/hetzner.py ${{ inputs.adim }}

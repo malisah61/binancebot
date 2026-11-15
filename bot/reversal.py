@@ -214,6 +214,45 @@ def btc_map(k):
     return m
 
 
+# ---------------------------------------------------------------- ileri test defteri (canlı kayıt)
+def ledger_update(scan):
+    """Her yeni dip tetiğini (özellikleri, kurala uyup uymadığı, CoinGecko trendi) kaydet; 7 gün dolunca
+    gerçek sonucu (dibin %20 üstü mü, stop mu, R) hesapla. Böylece internet trendi gibi geçmişi olmayan
+    işaretlerin de etkisi zamanla ölçülür."""
+    path = os.path.join(ROOT, "state", "reversal_ledger.json")
+    L = json.load(open(path)) if os.path.exists(path) else []
+    have = {(x["symbol"], x["low"]) for x in L}
+    for x in scan:
+        if (x["symbol"], x["low"]) not in have:
+            L.append({**x, "t_add": int(time.time() * 1000), "done": False})
+    now = time.time() * 1000
+    for x in L:
+        if x["done"] or now - x["t_add"] < 3600_000:
+            continue
+        try:
+            k = pd.DataFrame(binance.klines(x["symbol"], "1h", 1000))
+        except Exception:
+            continue
+        t0 = x["t_add"] - x["hours_ago"] * 3600_000
+        k = k[k["t"] >= t0 - 3600_000].reset_index(drop=True)
+        if len(k) < 2:
+            continue
+        h, l, c = (k[q].values.astype(float) for q in "hlc")
+        h = np.r_[np.nan, h[1:]]; l = np.r_[np.nan, l[1:]]
+        c[0] = x["price"]
+        o = outcome(np.nan_to_num(h, nan=x["price"]), np.nan_to_num(l, nan=x["price"]), c, 0, x["low"])
+        x.update({k2: (None if isinstance(v, float) and np.isnan(v) else v) for k2, v in o.items()})
+        x["done"] = bool(now - t0 > H7D * 3600_000 or (x.get("pump") == 1.0) or (x.get("R") is not None and x["R"] <= -0.99))
+    json.dump(L[-3000:], open(path, "w"), ensure_ascii=False, default=float)
+    D = [x for x in L if x["done"] and x.get("R") is not None]
+
+    def st(g):
+        return {"n": len(g), "pump": round(100 * np.mean([y.get("pump", 0) for y in g]), 1) if g else None,
+                "avg_R": round(float(np.mean([y["R"] for y in g])), 3) if g else None}
+    return {"all": st(D), "rule": st([y for y in D if y.get("rules")]), "trending": st([y for y in D if y.get("trending")]),
+            "not_trending": st([y for y in D if not y.get("trending")]), "open": sum(1 for x in L if not x["done"])}
+
+
 # ---------------------------------------------------------------- analiz
 def compare(E, split):
     res = []
@@ -338,8 +377,48 @@ def live_scan(rules):
             match = [r["text"] for r in rules if apply_rule(D, r["conds"])[0]]
             out.append({"symbol": s, "hours_ago": int(len(k) - 1 - e["i"]), "price": e["price"], "low": e["low"],
                         "now": float(k["c"].iloc[-1]), "dd30": round(e["dd30"], 1), "rvol24": round(e["rvol24"], 2),
-                        "taker24": round(e["taker24"], 3), "rules": match, "trending": s[:-4] in trend})
+                        "taker24": round(e["taker24"], 3), "rules": match, "trending": s[:-4] in trend,
+                        "feats": {f: (round(float(e[f]), 4) if f in e and e[f] == e[f] else None) for f in LIVE_FEATS}})
     return out, trend
+
+
+# ---------------------------------------------------------------- ileri test defteri (canlı kayıt)
+def ledger_update(scan):
+    """Her yeni dip tetiğini (özellikleri, kurala uyup uymadığı, CoinGecko trendi) kaydet; 7 gün dolunca
+    gerçek sonucu (dibin %20 üstü mü, stop mu, R) hesapla. Böylece internet trendi gibi geçmişi olmayan
+    işaretlerin de etkisi zamanla ölçülür."""
+    path = os.path.join(ROOT, "state", "reversal_ledger.json")
+    L = json.load(open(path)) if os.path.exists(path) else []
+    have = {(x["symbol"], x["low"]) for x in L}
+    for x in scan:
+        if (x["symbol"], x["low"]) not in have:
+            L.append({**x, "t_add": int(time.time() * 1000), "done": False})
+    now = time.time() * 1000
+    for x in L:
+        if x["done"] or now - x["t_add"] < 3600_000:
+            continue
+        try:
+            k = pd.DataFrame(binance.klines(x["symbol"], "1h", 1000))
+        except Exception:
+            continue
+        t0 = x["t_add"] - x["hours_ago"] * 3600_000
+        k = k[k["t"] >= t0 - 3600_000].reset_index(drop=True)
+        if len(k) < 2:
+            continue
+        h, l, c = (k[q].values.astype(float) for q in "hlc")
+        h = np.r_[np.nan, h[1:]]; l = np.r_[np.nan, l[1:]]
+        c[0] = x["price"]
+        o = outcome(np.nan_to_num(h, nan=x["price"]), np.nan_to_num(l, nan=x["price"]), c, 0, x["low"])
+        x.update({k2: (None if isinstance(v, float) and np.isnan(v) else v) for k2, v in o.items()})
+        x["done"] = bool(now - t0 > H7D * 3600_000 or (x.get("pump") == 1.0) or (x.get("R") is not None and x["R"] <= -0.99))
+    json.dump(L[-3000:], open(path, "w"), ensure_ascii=False, default=float)
+    D = [x for x in L if x["done"] and x.get("R") is not None]
+
+    def st(g):
+        return {"n": len(g), "pump": round(100 * np.mean([y.get("pump", 0) for y in g]), 1) if g else None,
+                "avg_R": round(float(np.mean([y["R"] for y in g])), 3) if g else None}
+    return {"all": st(D), "rule": st([y for y in D if y.get("rules")]), "trending": st([y for y in D if y.get("trending")]),
+            "not_trending": st([y for y in D if not y.get("trending")]), "open": sum(1 for x in L if not x["done"])}
 
 
 # ---------------------------------------------------------------- ana
@@ -375,10 +454,15 @@ def main():
                 "max_up": round(r.max_up, 1), "dd30": round(r.dd30, 1), "rvol24": round(r.rvol24, 2), "oi72": None if np.isnan(r.oi72) else round(r.oi72, 1),
                 "fund": None if np.isnan(r.fund) else round(r.fund, 4)} for r in top.itertuples()]
     scan, trend = live_scan(rules_live)
+    try:
+        ledger = ledger_update(scan)
+    except Exception as e:
+        print("defter hatası:", e)
+        ledger = None
     rep = {"time": int(time.time() * 1000), "coins": len(data), "triggers": int(len(E)), "pump_rate": round(float(E["pump"].mean() * 100), 1),
            "split": int(split), "compare": cmp_, "rules_all": rules_all, "rules_live": rules_live, "baseline": base,
            "adopted": adopted, "strategy": ({"conds": best["conds"], "text": best["text"]} if best else None),
-           "biggest": biggest, "scan": scan, "trending": trend}
+           "biggest": biggest, "scan": scan, "trending": trend, "ledger": ledger}
     json.dump(rep, open(os.path.join(ROOT, "state", "reversal.json"), "w"), ensure_ascii=False, default=float)
     md = to_md(rep)
     path = f"docs/gunluk/dipten-donus-{(today + timedelta(hours=3)).strftime('%Y-%m-%d')}.md"
@@ -424,6 +508,12 @@ def to_md(r):
                      + (" · ✅ kurala uyuyor" if x["rules"] else "") + (" · 🔥 CoinGecko trend" if x["trending"] else ""))
     if r["trending"]:
         L += ["", "CoinGecko'da şu an trend olanlar: " + ", ".join(r["trending"][:15])]
+    g = r.get("ledger")
+    if g:
+        L += ["", f"## İleri test defteri (canlı kaydedilen dipler, 7 gün sonra sonuçlanır; açık: {g['open']})", "",
+              f"- Tümü: {g['all']['n']} dip, %{g['all']['pump']} başarılı dönüş, ort {g['all']['avg_R']}R",
+              f"- Kurala uyanlar: {g['rule']['n']} dip, %{g['rule']['pump']} başarılı, ort {g['rule']['avg_R']}R",
+              f"- İnternette trend olan (CoinGecko): {g['trending']['n']} dip, %{g['trending']['pump']} başarılı, ort {g['trending']['avg_R']}R · trend olmayan: {g['not_trending']['n']} dip, %{g['not_trending']['pump']}, ort {g['not_trending']['avg_R']}R"]
     L += ["", "Simülasyon/araştırmadır, yatırım tavsiyesi değildir."]
     return "\n".join(L)
 

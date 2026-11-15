@@ -150,14 +150,15 @@ def detect(o, h, l, c, k=3):
         if i >= 23:
             hh = h[i - 21:i - 1].max()
             ll = l[i - 21:i - 1].min()
-            if c[i - 1] > hh >= c[i - 2]:  # yalnız ilk kırılım günü (trend boyunca her gün tekrar sayılmasın)
+            hh2, ll2 = h[i - 22:i - 2].max(), l[i - 22:i - 2].min()  # bir gün önceki seviyeler
+            if c[i - 1] > hh and c[i - 2] <= hh2:  # yalnız ilk kırılım günü (trend boyunca her gün tekrar sayılmasın)
                 if c[i] < hh:
                     ev.append({"i": i, "type": "BOGA_TUZAGI", "dir": -1, "stop": float(max(h[i], h[i - 1]) + 0.2 * A[i]),
                                "target": float(ll + (hh - ll) * 0.5), "info": f"{hh:.6g} üstü kırılım geri alındı"})
                 else:
                     ev.append({"i": i, "type": "KIRILIM_YUKARI", "dir": 1, "stop": float(hh - 1.0 * A[i]),
                                "target": float(c[i] + (hh - ll)), "info": f"{hh:.6g} üstü 2 gün kapanış"})
-            if c[i - 1] < ll <= c[i - 2]:
+            if c[i - 1] < ll and c[i - 2] >= ll2:
                 if c[i] > ll:
                     ev.append({"i": i, "type": "AYI_TUZAGI", "dir": 1, "stop": float(min(l[i], l[i - 1]) - 0.2 * A[i]),
                                "target": float(ll + (hh - ll) * 0.5), "info": f"{ll:.6g} altı kırılım geri alındı"})

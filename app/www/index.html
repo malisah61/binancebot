@@ -266,7 +266,8 @@ async function loadDetail(sym, seq) {
     perp ? safe(ratio("topLongShortPositionRatio", sym, tf)) : null, safe(perp ? fut(`/fapi/v1/depth?symbol=${sym}&limit=500`) : spot(`/api/v3/depth?symbol=${sym}&limit=500`)),
     safe(perp ? fut(`/fapi/v1/aggTrades?symbol=${sym}&limit=1000`) : spot(`/api/v3/aggTrades?symbol=${sym}&limit=1000`))]);
   if (seq !== S.seq) return; // bu arada başka coin açıldı
-  let btc = 0; try { const bk = await klines("BTCUSDT", tf, "BTCUSDT" in S.perps, 6); btc = Math.sign(bk[bk.length - 1].c - bk[bk.length - 5].c); } catch (e) {}
+  let btc = 0; try { const bk = await Promise.race([klines("BTCUSDT", tf, "BTCUSDT" in S.perps, 6), sleep(4000).then(() => null)]); if (bk && bk.length > 4) btc = Math.sign(bk[bk.length - 1].c - bk[bk.length - 5].c); } catch (e) {}
+  if (seq !== S.seq) return;
   const bk = book ? {bids: book.bids.map((x) => [+x[0], +x[1]]), asks: book.asks.map((x) => [+x[0], +x[1]])} : null;
   const trades = tr ? tr.map((x) => ({p: +x.p, q: +x.q, m: x.m, T: x.T})) : null;
   const a = TA.analyze(k, {htfMs: TFMS[tf] * 4, tfMs: TFMS[tf], oi, gls, tls, funding: perp ? S.perps[sym] : null, book: bk, trades, ...modelOpt(tf)});

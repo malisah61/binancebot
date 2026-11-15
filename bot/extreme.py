@@ -244,7 +244,7 @@ def sim(o, h, l, c, i, d, entry, stop, mode, cost, fund=0.0, hold=HOLD, wait=WAI
     bars = k - start + 1
     R -= cost / rf
     R -= d * fund * (bars / 8) / rf
-    return {"filled": True, "R": float(R), "risk": float(rf), "mae": float(mae), "bars": int(bars)}
+    return {"filled": True, "R": float(R), "risk": float(rf), "mae": float(mae), "bars": int(bars), "start": int(start)}
 
 
 def confirm(o, h, l, c, i, d, ref):

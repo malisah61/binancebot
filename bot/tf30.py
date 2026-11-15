@@ -138,6 +138,100 @@ def replay(T, start=1000.0):
     return {"final": round(eq, 1), "ret": round((eq / start - 1) * 100, 1), "mdd": round(mdd * 100, 1), "n": n, "skip": skipped}
 
 
+# ---------------------------------------------------------------- seçici kurallar
+SEL_DAILY = 4          # günde en çok yeni işlem
+
+
+def score_rules(strat):
+    tr = dict(strat, type="trend", lt=74, st=26, max_new=1)
+    out = {"A_trend74": ("Skor ≥74/≤26 uç sinyal, BTC 30g yönünde, mumda 1 işlem", tr)}
+    for fib in (0.382, 0.5):
+        for h in (None, "with"):
+            out[f"A_pb{int(fib*1000)}_{h or 'x'}"] = (
+                f"Skor ≥66 + %{fib*100:.1f} geri çekilmede limit{' + 4s trend yönünde' if h else ''}, BTC 30g yönünde",
+                {"type": "pullback", "lt": 66, "st": 34, "max_pos": 0.5, "entry": "fib", "fib": fib, "expire": 6, "stop_lb": 12,
+                 "buf": 0.3, "max_risk": 3.0, "tp1": 1.5, "tp2": 3.0, "htf": h, "max_new": 1})
+    return out
+
+
+def event_trades(coins, b30):
+    """30dk sert hareketler (6 saatte ≥ eşik): aynı yönde Fib geri çekilmesine limit veya ters yöne piyasa girişi."""
+    import extreme as X
+    X.FIB_WAIT = 24                      # 12 saat (24 mum) bekler
+    cost = X.FEE + 2 * X.SLIP["büyük"]
+    res = {}
+    for s, (df, R, fm) in coins.items():
+        o, h, l, c = (df[q].values.astype(float) for q in "ohlc")
+        t = df["t"].values
+        a = X.atr(h, l, c)
+        hi, lo = X.roll_max(h, 12), X.roll_min(l, 12)
+        dn, up = c / hi - 1, c / lo - 1
+        fu = df["funding"].values.astype(float) if "funding" in df else np.zeros(len(c))
+        for th in (0.05, 0.08, 0.12):
+            last = -10 ** 9
+            for i in np.flatnonzero(((dn <= -th) & (np.r_[0, dn[:-1]] > -th)) | ((up >= th) & (np.r_[0, up[:-1]] < th))):
+                if i < 1500 or i - last < 24 or i >= len(c) - 2:
+                    continue
+                last = i
+                ev = "crash" if dn[i] <= -th else "pump"
+                r30 = b30.get(t[i], np.nan)
+                for name in ("S_f38", "S_f50", "S_f62", "L_mkt") if ev == "crash" else ("L_f38", "L_f50", "L_f62", "S_mkt"):
+                    d = X.VARIANTS[ev][name][0]
+                    if ev == "crash" and name == "L_mkt":
+                        e, sp, mode = c[i], min(lo[i] - 0.5 * a[i], c[i] - a[i]), "mkt"
+                    elif ev == "pump" and name == "S_mkt":
+                        e, sp, mode = c[i], max(hi[i] + 0.5 * a[i], c[i] + a[i]), "mkt"
+                    else:
+                        p = X.plan(ev, name, o, h, l, c, i, a[i], lo[i], hi[i])
+                        if p is None:
+                            continue
+                        e, sp, mode, _ = p
+                    r = X.sim(o, h, l, c, i, d, e, sp, mode, cost, float(np.nan_to_num(fu[i])) / 1.0, hold=72)
+                    if not r.get("filled"):
+                        continue
+                    tr = {"sym": s, "t": int(t[min(r["start"], len(t) - 1)]), "t_exit": int(t[min(r["start"] + r["bars"] - 1, len(t) - 1)]),
+                          "dir": d, "R": r["R"], "roe": LEV * r["R"] * r["risk"], "liq": False}
+                    for rg in ("tümü", "btc"):
+                        if rg == "btc" and not ((d > 0 and r30 > 0) or (d < 0 and r30 < 0)):
+                            continue
+                        key = f"B_{ev}_{name}_{int(th*100)}_{rg}"
+                        desc = (f"6 saatte %{int(th*100)}+ {'düşüş' if ev == 'crash' else 'yükseliş'} → {X.VARIANTS[ev][name][2] if 'f' in name else ('ters yöne hemen giriş')}"
+                                f"{', BTC 30g yönünde' if rg == 'btc' else ''}")
+                        res.setdefault(key, [desc, []])[1].append(tr)
+    return res
+
+
+def daily_cap(T, cap=SEL_DAILY):
+    T = sorted(T, key=lambda x: x["t"])
+    cnt, out = {}, []
+    for x in T:
+        d = x["t"] // 86400000
+        if cnt.get(d, 0) < cap:
+            cnt[d] = cnt.get(d, 0) + 1
+            out.append(x)
+    return out
+
+
+def selective(coins, scores, b30, b4, strat, split):
+    pool = {}
+    for key, (desc, st) in score_rules(strat).items():
+        sv = {s: filtered_scores("btc30_dir", coins[s][0]["t"].values, scores[s], b30, b4) for s in coins}
+        pool[key] = (desc, research.run_strategy(coins, TF, st, LEV, "all", split, sv))
+    for key, (desc, T) in event_trades(coins, b30).items():
+        pool[key] = (desc, T)
+    rows = {}
+    for key, (desc, T) in pool.items():
+        T = daily_cap(T)
+        tr, te = [x for x in T if x["t"] < split], [x for x in T if x["t"] >= split]
+        rows[key] = {"desc": desc, "train": tstats(tr), "test": tstats(te), "replay_train": replay(tr), "replay_test": replay(te),
+                     "replay_all": replay(T), "per_day": round(len(T) / DAYS, 2)}
+    cand = [k for k, v in rows.items() if v["train"].get("n", 0) >= 100]
+    pick = max(cand, key=lambda k: rows[k]["train"]["avg_roe"]) if cand else None
+    te = rows[pick]["test"] if pick else {}
+    adopted = bool(pick and te.get("n", 0) >= 40 and te["avg_roe"] > 0 and (te.get("pf") or 0) > 1.05 and rows[pick]["train"]["avg_roe"] > 0)
+    return {"rows": rows, "pick": pick, "adopted": adopted}
+
+
 def monthly(T):
     m = {}
     for x in T:
@@ -167,16 +261,21 @@ def analyze(raw, today):
         tr, te = [x for x in T if x["t"] < split], [x for x in T if x["t"] >= split]
         res[name] = {"desc": VARIANTS[name], "train": tstats(tr), "test": tstats(te), "replay_train": replay(tr), "replay_test": replay(te),
                      "replay_all": replay(T), "monthly": monthly(T)}
+    sel = selective(coins, scores, b30, b4, strat, split)
     cand = [k for k, v in res.items() if v["train"].get("n", 0) >= 100]
     pick = max(cand, key=lambda k: res[k]["train"]["avg_R"]) if cand else None
     te = res[pick]["test"] if pick else {}
     adopted = bool(pick and te.get("n", 0) >= 40 and te["avg_R"] > 0 and (te.get("pf") or 0) > 1.05 and res[pick]["train"]["avg_R"] > 0)
     return {"time": int(time.time() * 1000), "coins": len(coins), "days": DAYS, "split": split, "strategy": sname,
-            "variants": res, "pick": pick, "adopted": adopted}
+            "variants": res, "pick": pick, "adopted": adopted, "selective": sel}
 
 
 def fs(s):
     return f"{s['n']} işl · %{s['win']} · ort {s['avg_R']}R · PF {s['pf']} (L{s['long']}/S{s['short']})" if s.get("n") else "-"
+
+
+def fs2(s):
+    return f"{s['n']} işl · %{s['win']} · ort %{s['avg_roe']} · PF {s['pf']}" if s.get("n") else "-"
 
 
 def to_md(r):
@@ -200,6 +299,18 @@ def to_md(r):
     p = r["pick"]
     if p:
         L += ["", f"**Eğitimde en iyi:** {r['variants'][p]['desc']} → " + ("✅ TEST'te DOĞRULANDI" if r["adopted"] else "❌ TEST'te tutmadı")]
+    S = r.get("selective")
+    if S:
+        rows = sorted(S["rows"].items(), key=lambda kv: -(kv[1]["train"].get("avg_roe") or -99) if kv[1]["train"].get("n", 0) >= 100 else 99)
+        L += ["", f"## Seçici kurallar (günde en çok {SEL_DAILY} yeni işlem) — eğitime göre en iyi 12", "",
+              "| Kural | günde | Eğitim | TEST | Gerçek kurallarla TEST dönemi | Tüm yıl |", "|---|---|---|---|---|---|"]
+        for k, v in rows[:12]:
+            b, c = v["replay_test"], v["replay_all"]
+            L.append(f"| {v['desc']} | {v['per_day']} | {fs2(v['train'])} | {fs2(v['test'])} | %{b['ret']:+} (düşüş %{b['mdd']}) | %{c['ret']:+} (düşüş %{c['mdd']}) |")
+        good = [(k, v) for k, v in S["rows"].items() if v["test"].get("n", 0) >= 40 and v["test"]["avg_roe"] > 0 and (v["test"].get("pf") or 0) > 1.05 and (v["train"].get("avg_roe") or -1) > 0]
+        L += ["", "Hem eğitimde hem TEST'te kârlı olanlar (bilgi amaçlı): " + ("; ".join(f"{v['desc']} (TEST {fs2(v['test'])})" for k, v in good[:6]) or "yok")]
+        if S["pick"]:
+            L += ["", f"**Seçici kurallarda eğitimde en iyi:** {S['rows'][S['pick']]['desc']} → " + ("✅ TEST'te DOĞRULANDI" if S["adopted"] else "❌ TEST'te tutmadı")]
     L += ["", "_Simülasyondur, yatırım tavsiyesi değildir._"]
     return "\n".join(L)
 

@@ -17,6 +17,6 @@ r = tf30.analyze(raw, today)
 for name, v in r["variants"].items():
     print(name, v["train"], v["test"].get("n"), v["replay_all"])
     if name == "short_only": assert v["train"].get("long", 0) == 0 and v["test"].get("long", 0) == 0
-print("seçim", r["pick"], r["adopted"])
+print("seçim", r["pick"], r["adopted"]); S = r["selective"]; print("seçici", len(S["rows"]), S["pick"], S["adopted"], {k: v["train"].get("n") for k, v in list(S["rows"].items())[:6]})
 md = tf30.to_md(r); assert "Gerçek hesap kurallarıyla" in md
 print("30DK TESTİ GEÇTİ")

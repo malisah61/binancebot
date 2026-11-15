@@ -25,6 +25,7 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(__file__))
 import binance  # noqa: E402
 import executor  # noqa: E402
+import mine15  # noqa: E402
 import telegram  # noqa: E402
 import v5  # noqa: E402
 
@@ -333,11 +334,16 @@ def main():
     for tf in TFS:
         w, st, st_name, adopted = model_for(tf)
         rows = []
+        btcR = None
+        if "BTCUSDT" in data and len(data["BTCUSDT"][0][tf]) >= 260:
+            btcR = v5.compute(data["BTCUSDT"][0][tf], tf)
         for s, (frames, _) in data.items():
             df = frames[tf]
             if len(df) < 260:
                 continue
             R = v5.compute(df, tf)
+            if btcR is not None:
+                R["btc4"] = mine15.btc_trend(btcR, R["t"].values)
             sc = score_with(R, w)
             if not np.isfinite(sc[-1]):
                 continue

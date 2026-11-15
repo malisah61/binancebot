@@ -259,6 +259,11 @@ def signals(R, score, st):
         mp = st.get("max_pos", 0.6)
         d = np.where((d > 0) & (pos > mp), 0, np.where((d < 0) & (pos < 1 - mp), 0, d))
         strength = np.abs(sc - 50)
+    elif typ == "rules":  # kazanan işlemlerin ortak noktalarından çıkarılan kurallar (mine15)
+        import mine15
+        d = np.where(sc >= st.get("lt", 55), 1, np.where(sc <= st.get("st", 45), -1, 0))
+        d = mine15.rule_signals(R, d, st["conds"])
+        strength = np.abs(sc - 50)
     else:  # sweep
         d = np.where(R["f_ssl1"].values > 0, 1, np.where(R["f_bsl1"].values > 0, -1, 0))
         strength = np.nan_to_num(np.abs(ext))
@@ -311,4 +316,7 @@ def strategy_name(st):
         return (f"Geri çekilmede limit giriş (skor ≥{st['lt']} / ≤{round(st['st'])}, dip-tepe aralığının en fazla %{int(st.get('max_pos', 0.6) * 100)}'inde, "
                 f"{ent} limit emir, {st.get('expire', 6)} mum geçerli, stop son {st.get('stop_lb', 12)} mumun dibinin/tepesinin ötesi, "
                 f"hedef {st.get('tp1', 1.5)}R / {st.get('tp2', 2.5)}R){h}")
+    if t == "rules":
+        import mine15
+        return f"Kazanan ortak noktaları kuralı (skor ≥{st.get('lt', 55)} / ≤{st.get('st', 45)} VE {mine15.rule_text(st['conds'])}){h}, {ex}"
     return f"Likidite avı tersine dönüş{h}, {ex}"

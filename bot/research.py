@@ -33,6 +33,7 @@ import binance  # noqa: E402
 import sim  # noqa: E402
 import telegram  # noqa: E402
 import v5  # noqa: E402
+import mine15  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CACHE = os.path.join(ROOT, "data", "cache")
@@ -438,8 +439,19 @@ def run(raw, today, t0=None):
                             "learned": adopt, "test_avg_R": ot.get("avg_R"), "test_win": ot.get("win"), "baseline_test_avg_R": bt.get("avg_R")}
         # 4) STRATEJİ YARIŞMASI (yalnız canlıda da hesaplanabilen veriler)
         live_scores = {sym: score_with(R, LIVE_W) for sym, (df, R, fm) in coins.items()}
+        extra = []
+        if tf == "15m":  # kazanan işlemlerin ortak noktaları (yalnız eğitimde bulunur)
+            try:
+                mined = mine15.mine(coins, split_t)
+                out["mined"] = mined
+                for r in mined["rules"]:
+                    extra.append({"type": "rules", "lt": 55, "st": 45, "conds": r["conds"], "htf": None,
+                                  "sl": 1.0, "tp1": 1.5, "tp2": 2.5, "max_new": 3})
+                print("15m kural madenciliği:", json.dumps(mined, ensure_ascii=False)[:1500])
+            except Exception as e:
+                print("kural madenciliği hatası:", e)
         res = []
-        for stg in strategy_grid():
+        for stg in strategy_grid() + extra:
             stt = sim.stats(run_strategy(coins, tf, stg, 5, "train", split_t, live_scores))
             if stt.get("n", 0) >= 60:
                 res.append((stt["avg_R"] * np.sqrt(stt["n"]), stg, stt))
@@ -522,6 +534,13 @@ def to_markdown(rep):
             t5, t10 = x["test"]["5"], x["test"]["10"]
             L.append(f"| {i} | {x['name']} | {x['train']['avg_R']} ({x['train']['n']}) | {_f(t5.get('avg_R'))} | %{_f(t5.get('win'))} ({t5.get('n')}) | {_f(t5.get('pf'))} | %{_f(t5.get('avg_roe'))} | %{_f(t10.get('avg_roe'))} | {_f(t10.get('liq'))} |")
         L.append("")
+    m = rep["tfs"].get("15m", {}).get("mined")
+    if m:
+        L += ["", "## 5. 15dk: kazanan işlemlerin ortak noktaları (eğitimde bulundu)", "",
+              f"Tüm olaylar: eğitim ort. net R {m['base_train_avg_R']} ({m['events_train']} olay), test {m['base_test_avg_R']} ({m['events_test']} olay)", "",
+              "| Kural | Eğitim ort R (n) | Eğitim 1./2. yarı | TEST olay ort R (n) |", "|---|---|---|---|"]
+        for r in m["rules"]:
+            L.append(f"| {r['text']} | {r['train']['avg_R']} ({r['train']['n']}) | {r['halves'][0]} / {r['halves'][1]} | {r['test_events']['avg_R']} ({r['test_events']['n']}) |")
     L += ["", "IC (bilgi katsayısı): gösterge puanı ile sonraki getiri arasındaki sıralama korelasyonu. Piyasada 0.02–0.05 bile anlamlıdır; negatif ise gösterge ters çalışıyor demektir.",
           "Geçmiş performans geleceği garanti etmez."]
     return "\n".join(L)

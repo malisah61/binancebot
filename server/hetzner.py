@@ -43,7 +43,9 @@ def step_ip():
 def user_data():
     k, s = os.environ.get("BINANCE_REAL_KEY", ""), os.environ.get("BINANCE_REAL_SECRET", "")
     tok = os.environ.get("TELEGRAM_TOKEN", "")
-    env = f"TELEGRAM_TOKEN={tok}\nTELEGRAM_CHAT_ID={CHAT}\n" + (f"BINANCE_REAL_KEY={k}\nBINANCE_REAL_SECRET={s}\n" if k and s else "")
+    dk, dsec = os.environ.get("BINANCE_DEMO_KEY", ""), os.environ.get("BINANCE_DEMO_SECRET", "")
+    env = (f"TELEGRAM_TOKEN={tok}\nTELEGRAM_CHAT_ID={CHAT}\n" + (f"BINANCE_REAL_KEY={k}\nBINANCE_REAL_SECRET={s}\n" if k and s else "")
+           + (f"BINANCE_DEMO_KEY={dk}\nBINANCE_DEMO_SECRET={dsec}\n" if dk and dsec else ""))
     ind = "\n".join("      " + x for x in env.strip().splitlines())
     return f"""#cloud-config
 write_files:

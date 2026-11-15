@@ -1,0 +1,7 @@
+[Unit]
+Description=Kripto bot gercek hesap 5 dakikada bir
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+[Install]
+WantedBy=timers.target

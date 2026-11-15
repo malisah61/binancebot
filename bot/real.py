@@ -23,12 +23,16 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(__file__))
 import executor  # noqa: E402
 import extreme as X  # noqa: E402
+import pbtrend  # noqa: E402
 import telegram  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-STATE = os.environ.get("GERCEK_STATE", os.path.expanduser("~/gercek.json"))
+MODE = os.environ.get("GERCEK_MODE", "real")          # real | demo (aynı kod, demo hesapta gerçek emir)
+STATE = os.environ.get("GERCEK_STATE", os.path.expanduser("~/gercek.json" if MODE == "real" else "~/demo_sunucu.json"))
 DRY = os.environ.get("GERCEK_DRY") == "1"
-LIMITS = {"lev": 3, "margin_frac": 0.15, "max_pos": 3, "daily_loss": 0.05}
+LIMITS = {"lev": 3, "margin_frac": 0.15, "max_pos": 6, "daily_loss": 0.05}
+MARGIN = {"extreme": 0.15, "pullback": 0.075}          # uç hareket %15 · geri çekilme %7.5 (en çok 6 işlem)
+LABEL = "💰 GERÇEK" if MODE == "real" else "🧪 DEMO-sunucu"
 REAL_HOST = "https://fapi.binance.com"
 
 
@@ -56,8 +60,17 @@ class Real(executor.Demo):
             executor.SECRET = old
 
 
+_pub = None
+
+
 def klines(R, sym, n=800):
-    raw = R.req("GET", "/fapi/v1/klines", {"symbol": sym, "interval": "1h", "limit": n}, signed=False)
+    """Sinyaller her iki modda da GERÇEK piyasa verisinden (herkese açık uç) hesaplanır."""
+    global _pub
+    import requests
+    _pub = _pub or requests.Session()
+    r = _pub.get(REAL_HOST + "/fapi/v1/klines", params={"symbol": sym, "interval": "1h", "limit": n}, timeout=15)
+    r.raise_for_status()
+    raw = r.json()
     k = pd.DataFrame([{"t": int(r[0]), "o": float(r[1]), "h": float(r[2]), "l": float(r[3]), "c": float(r[4]),
                        "qv": float(r[7]), "tq": float(r[10])} for r in raw])
     return k
@@ -109,12 +122,48 @@ def candidates(R, picks, rank, done):
     return out, regime
 
 
+def pb_candidates(R, rank, ds, skip=()):
+    """Trend yönünde geri çekilme: yeni kapanan 4s/3s/2s mumlarında kurulum → limit emir planları (önce 4s, büyük coin)."""
+    now = int(time.time() * 1000)
+    last = ds.setdefault("pb_last", {})
+    new = {tf: (now // st["ms"]) * st["ms"] - st["ms"] for tf, st in pbtrend.SETUPS.items()}
+    new = {tf: t for tf, t in new.items() if last.get(tf) != t}
+    if not new:
+        return []
+    btc = klines(R, "BTCUSDT", 1500)
+    bdir = {tf: pbtrend.btc_direction(btc, pbtrend.SETUPS[tf]["ms"], now) for tf in new}
+    syms = sorted([s for s, r in rank.items() if r <= pbtrend.MAX_RANK and s not in skip], key=lambda s: rank[s])
+    out = []
+    for s in syms:
+        try:
+            k = klines(R, s, 1500)
+        except Exception:
+            continue
+        for tf, bt in new.items():
+            if not bdir[tf]:
+                continue
+            st = pbtrend.SETUPS[tf]
+            sg = pbtrend.signal(pbtrend.bars(k, st["ms"], now), bdir[tf], st)
+            if sg and sg[1]["bar_t"] == bt:
+                out.append({"sym": s, "dir": sg[0], "plan": sg[1], "desc": st["desc"], "tf": tf, "rank": rank[s]})
+    for tf, t in new.items():
+        last[tf] = t
+    order = {"4h": 0, "3h": 1, "2h": 2}
+    out.sort(key=lambda x: (order[x["tf"]], x["rank"]))
+    seen, uniq = set(), []
+    for x in out:                                   # aynı coinde tek işlem
+        if x["sym"] not in seen:
+            seen.add(x["sym"])
+            uniq.append(x)
+    return uniq
+
+
 def main():
     if os.environ.get("GITHUB_ACTIONS"):
         raise SystemExit("Gerçek hesap modülü GitHub Actions'ta çalıştırılamaz.")
     chat = os.environ.get("TELEGRAM_CHAT_ID")
     executor.CFG.update(LIMITS)
-    R = Real()
+    R = Real() if MODE == "real" else executor.Demo()
     ds = json.load(open(STATE)) if os.path.exists(STATE) else executor.new_state() | {"done": {}}
     ds.setdefault("done", {})
     ctl = {}
@@ -122,6 +171,8 @@ def main():
         ctl = json.load(open(os.path.join(ROOT, "state", "gercek_kontrol.json")))
     except Exception:
         pass
+    if MODE != "real":
+        ctl = {}
     ds["paused"] = bool(ctl.get("paused", False))
     close_all = ctl.get("close_all_t", 0) > ds.get("close_all_done", 0)
     msgs = []
@@ -133,35 +184,55 @@ def main():
     eq, last = ds.get("equity", 0), ds.get("eq_reported")
     if ctl.get("rapor_t", 0) > ds.get("rapor_done", 0) or last is None or abs(eq - last) > max(1.0, 0.1 * last):
         ds["eq_reported"], ds["rapor_done"] = eq, ctl.get("rapor_t", 0)
-        min_need = 5 / (LIMITS["margin_frac"] * LIMITS["lev"]) * 1.1
-        msgs.append(f"💰 Gerçek Futures bakiyesi: {eq:.2f} USDT · açık {len(ds['positions'])} · bekleyen {len(ds['pending'])}"
+        min_need = 5 / (MARGIN["pullback"] * LIMITS["lev"]) * 1.1
+        msgs.append(f"{LABEL} Futures bakiyesi: {eq:.2f} USDT · açık {len(ds['positions'])} · bekleyen {len(ds['pending'])}"
                     f"{' · ⏸ duraklatıldı' if ds['paused'] else ''}"
-                    + (f"\n⚠️ Binance'in en küçük emir tutarı (~5 $) nedeniyle bot en az ~{min_need:.0f} USDT ile işlem açabilir." if eq < min_need else ""))
+                    + (f"\n⚠️ Binance'in en küçük emir tutarı (~5 $) nedeniyle geri çekilme işlemleri için en az ~{min_need:.0f} USDT gerekir (uç hareket için ~12)." if eq < min_need else ""))
     rep = json.load(open(os.path.join(ROOT, "state", "extreme.json")))
     picks = {ev: p for ev, p in rep.get("picks", {}).items() if p.get("adopted")}
     rank = rep.get("rank_hist") or {}
     if not rank:
         msgs.append("ℹ️ extreme.json'da katman bilgisi yok, bu tur atlandı.")
-    elif picks and not ds["paused"] and not ds.get("halted") and ds.get("equity", 0) >= 5 / (LIMITS["margin_frac"] * LIMITS["lev"]):
-        cands, regime = candidates(R, picks, rank, ds["done"])
-        for c in cands:
-            try:
-                executor.place_limit(R, ds, c["sym"], c["dir"], c["plan"], msgs)
-            except executor.BinanceError as e:
-                ds["errors"].append(f"{c['sym']} limit hatası: {e}")
+    elif not ds["paused"] and not ds.get("halted"):
+        eq = ds.get("equity", 0)
+        if picks and eq >= 5 / (MARGIN["extreme"] * LIMITS["lev"]):
+            cands, regime = candidates(R, picks, rank, ds["done"])
+            executor.CFG["margin_frac"] = MARGIN["extreme"]
+            for c in cands:
+                try:
+                    executor.place_limit(R, ds, c["sym"], c["dir"], c["plan"], msgs)
+                except executor.BinanceError as e:
+                    ds["errors"].append(f"{c['sym']} limit hatası: {e}")
+        if eq >= 5 / (MARGIN["pullback"] * LIMITS["lev"]):
+            skip = set()
+            if MODE != "real":                               # Actions'taki eski demo işlemleriyle çakışma olmasın
+                try:
+                    skip = set(json.load(open(os.path.join(ROOT, "state", "demo.json"))).get("positions", {}))
+                except Exception:
+                    pass
+            executor.CFG["margin_frac"] = MARGIN["pullback"]
+            for c in pb_candidates(R, rank, ds, skip):
+                try:
+                    n0 = len(ds["pending"])
+                    executor.place_limit(R, ds, c["sym"], c["dir"], c["plan"], msgs)
+                    if len(ds["pending"]) > n0:
+                        msgs[-1] += f" · {c['desc']}"
+                except executor.BinanceError as e:
+                    ds["errors"].append(f"{c['sym']} limit hatası: {e}")
         cutoff = int(time.time() * 1000) - 7 * 86400_000
         ds["done"] = {k: v for k, v in ds["done"].items() if v > cutoff}
     json.dump(ds, open(STATE + ".tmp", "w"), ensure_ascii=False, default=float)
     os.replace(STATE + ".tmp", STATE)
-    msgs = [m.replace("🧪", "💰").replace("DEMO", "GERÇEK") for m in msgs]
+    msgs = [m.replace("🧪 DEMO", LABEL).replace("🧪⏳ DEMO", LABEL + " ⏳").replace("🧪✅ DEMO", LABEL + " ✅").replace("🧪⚠️ DEMO", LABEL + " ⚠️")
+            .replace("🧪⛔ DEMO", LABEL + " ⛔") for m in msgs]
     hour = time.gmtime().tm_hour
     if msgs:
         telegram.send(chat, "\n".join(msgs))
     if hour == 5 and time.gmtime().tm_min < 5:                     # her sabah 08:00 (TR) özet
         cl = ds["closed"]
-        telegram.send(chat, f"💰 <b>Gerçek hesap</b> — bakiye {ds.get('equity', 0):.2f} USDT{' · ⏸ duraklatıldı' if ds['paused'] else ''}\n"
+        telegram.send(chat, f"{LABEL} <b>hesap</b> — bakiye {ds.get('equity', 0):.2f} USDT{' · ⏸ duraklatıldı' if ds['paused'] else ''}\n"
                             f"Açık {len(ds['positions'])} · bekleyen {len(ds['pending'])} · kapanan {len(cl)} · toplam {sum(x['pnl'] for x in cl):+.2f}$\n"
-                            f"Kurulumlar: {', '.join(p['desc'] for p in picks.values()) or 'doğrulanmış kurulum yok (işlem açılmaz)'}")
+                            f"Kurulumlar: {', '.join([p['desc'] for p in picks.values()] + [st['desc'] for st in pbtrend.SETUPS.values()])}")
     print("\n".join(msgs) or "değişiklik yok")
 
 

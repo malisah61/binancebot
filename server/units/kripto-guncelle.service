@@ -1,0 +1,5 @@
+[Unit]
+Description=Kripto bot kodunu ve servisleri guncelle
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /home/kripto/binancebot/server/guncelle.sh

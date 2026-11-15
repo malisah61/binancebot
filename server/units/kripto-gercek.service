@@ -1,0 +1,11 @@
+[Unit]
+Description=Kripto bot gercek hesap yoneticisi
+After=network-online.target
+[Service]
+Type=oneshot
+User=kripto
+EnvironmentFile=/etc/kripto.env
+Environment=GERCEK_MODE=real
+WorkingDirectory=/home/kripto/binancebot
+ExecStart=/home/kripto/venv/bin/python /home/kripto/binancebot/bot/real.py
+TimeoutStartSec=280

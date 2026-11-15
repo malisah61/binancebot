@@ -30,6 +30,24 @@ p = c[0]["plan"]; assert c[0]["dir"] == -1 and p["sl"] > p["entry"] > p["tp1"] >
 assert data["AAAUSDT"]["c"].iloc[-2] < p["entry"]          # limit, fiyatın üstünde (tepki bekler)
 c2, _ = real.candidates(None, picks, rank, done)
 assert not c2, "aynı olay ikinci kez işlenmemeli"
+# geri çekilme: 4s yükselen trendde yeni tepe sonrası %50 geri çekilmeye limit LONG
+import pbtrend
+n = 1500
+tt = (int(time.time() * 1000) // 3600000) * 3600000 - (n - 1) * 3600000 + np.arange(n) * 3600000   # son satır süren mum
+def up(seed, slope):
+    rnd = np.random.default_rng(seed); r = rnd.normal(slope, 0.004, n)
+    r[-60:-10] -= slope * 2                 # kısa düzeltme, sonra yeni tepe
+    r[-10:-1] += 0.004
+    c = 100 * np.exp(np.cumsum(r)); o = np.r_[100, c[:-1]]
+    return pd.DataFrame({"t": tt, "o": o, "h": np.maximum(o, c) * 1.002, "l": np.minimum(o, c) * 0.998, "c": c, "qv": 1e6, "tq": 5e5})
+pdata = {"BTCUSDT": up(10, 0.0006), "UPUSDT": up(11, 0.0008), "FLATUSDT": mk(12, n=n)}
+real.klines = lambda R, s, n=800: pdata[s]
+ds = {}
+c3 = real.pb_candidates(None, {"BTCUSDT": 1, "UPUSDT": 20, "FLATUSDT": 30}, ds)
+print("geri çekilme adayları:", [(x["sym"], x["tf"], x["dir"], round(x["plan"]["entry"], 2), round(x["plan"]["sl"], 2)) for x in c3], ds["pb_last"])
+for x in c3:
+    p = x["plan"]; assert (p["sl"] < p["entry"] < p["tp1"]) if x["dir"] == 1 else (p["sl"] > p["entry"] > p["tp1"])
+assert real.pb_candidates(None, {"BTCUSDT": 1, "UPUSDT": 20}, ds) == [], "aynı mum ikinci kez işlenmemeli"
 os.environ["GITHUB_ACTIONS"] = "true"
 try:
     real.main(); raise AssertionError("Actions'ta çalışmamalıydı")

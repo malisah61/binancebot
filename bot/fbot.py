@@ -305,6 +305,7 @@ def handle_commands(state, px, latest):
 
 # ---------------------------------------------------------------- ana
 DEMO, DS = None, None
+DEMO_NEW = False   # yeni demo işlemleri artık sunucudaki yönetici açıyor (geri çekilme + uç hareket); burada yalnız eskiler yönetilir
 
 
 def main():
@@ -408,7 +409,7 @@ def main():
                     risk = abs(lv[0] - lv[1]) / lv[0] * 100
                     msgs.append(f"⏳ {tf} {lev}x LİMİT {'LONG' if d > 0 else 'SHORT'} <b>{s.replace('USDT', '')}</b> giriş {fmt(lv[0])} "
                                 f"(şimdi {fmt(float(row['c']))}) SL {fmt(lv[1])} (risk %{risk:.1f}) TP1 {fmt(lv[2])} TP2 {fmt(lv[3])}")
-                    if DEMO and adopted and tf == executor.CFG["tf"] and lev == executor.CFG["lev"]:
+                    if DEMO and DEMO_NEW and adopted and tf == executor.CFG["tf"] and lev == executor.CFG["lev"]:
                         try:
                             executor.place_limit(DEMO, DS, s, d, {"entry": lv[0], "sl": lv[1], "tp1": lv[2], "tp2": lv[3], "expire_t": q["expire_t"],
                                                                   "until_ms": v5.TF_MS[tf] * CFG["max_hold"][tf], "score": sc}, msgs)
@@ -418,7 +419,7 @@ def main():
                     continue
                 p = open_pos(acc, s, d, row, tf, lev, sc, snap, msgs, st)
                 busy.add(s)
-                if p and DEMO and adopted and tf == executor.CFG["tf"] and lev == executor.CFG["lev"]:
+                if p and DEMO and DEMO_NEW and adopted and tf == executor.CFG["tf"] and lev == executor.CFG["lev"]:
                     try:
                         executor.open_trade(DEMO, DS, s, d, {"entry": p["entry"], "sl": p["sl"], "tp1": p["tp1"], "tp2": p["tp2"],
                                                              "until": p["until"], "score": p["score"]}, msgs)

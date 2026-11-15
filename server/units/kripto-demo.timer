@@ -1,0 +1,7 @@
+[Unit]
+Description=Kripto bot demo hesap 5 dakikada bir
+[Timer]
+OnBootSec=4min
+OnUnitActiveSec=5min
+[Install]
+WantedBy=timers.target

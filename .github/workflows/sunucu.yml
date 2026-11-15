@@ -23,6 +23,8 @@ jobs:
           HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
           BINANCE_REAL_KEY: ${{ secrets.BINANCE_REAL_KEY }}
           BINANCE_REAL_SECRET: ${{ secrets.BINANCE_REAL_SECRET }}
+          BINANCE_DEMO_KEY: ${{ secrets.BINANCE_DEMO_KEY }}
+          BINANCE_DEMO_SECRET: ${{ secrets.BINANCE_DEMO_SECRET }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python server/hetzner.py ${{ inputs.adim }}

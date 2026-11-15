@@ -735,10 +735,15 @@
   [
    1794729298199,
    4975.73
+  ],
+  [
+   1794730197946,
+   4975.63
   ]
  ],
  "errors": [],
  "halted": false,
- "equity": 4975.73,
- "pending": {}
+ "equity": 4975.63,
+ "pending": {},
+ "no_edge_note": true
 }

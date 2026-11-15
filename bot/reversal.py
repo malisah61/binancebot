@@ -214,45 +214,6 @@ def btc_map(k):
     return m
 
 
-# ---------------------------------------------------------------- ileri test defteri (canlı kayıt)
-def ledger_update(scan):
-    """Her yeni dip tetiğini (özellikleri, kurala uyup uymadığı, CoinGecko trendi) kaydet; 7 gün dolunca
-    gerçek sonucu (dibin %20 üstü mü, stop mu, R) hesapla. Böylece internet trendi gibi geçmişi olmayan
-    işaretlerin de etkisi zamanla ölçülür."""
-    path = os.path.join(ROOT, "state", "reversal_ledger.json")
-    L = json.load(open(path)) if os.path.exists(path) else []
-    have = {(x["symbol"], x["low"]) for x in L}
-    for x in scan:
-        if (x["symbol"], x["low"]) not in have:
-            L.append({**x, "t_add": int(time.time() * 1000), "done": False})
-    now = time.time() * 1000
-    for x in L:
-        if x["done"] or now - x["t_add"] < 3600_000:
-            continue
-        try:
-            k = pd.DataFrame(binance.klines(x["symbol"], "1h", 1000))
-        except Exception:
-            continue
-        t0 = x["t_add"] - x["hours_ago"] * 3600_000
-        k = k[k["t"] >= t0 - 3600_000].reset_index(drop=True)
-        if len(k) < 2:
-            continue
-        h, l, c = (k[q].values.astype(float) for q in "hlc")
-        h = np.r_[np.nan, h[1:]]; l = np.r_[np.nan, l[1:]]
-        c[0] = x["price"]
-        o = outcome(np.nan_to_num(h, nan=x["price"]), np.nan_to_num(l, nan=x["price"]), c, 0, x["low"])
-        x.update({k2: (None if isinstance(v, float) and np.isnan(v) else v) for k2, v in o.items()})
-        x["done"] = bool(now - t0 > H7D * 3600_000 or (x.get("pump") == 1.0) or (x.get("R") is not None and x["R"] <= -0.99))
-    json.dump(L[-3000:], open(path, "w"), ensure_ascii=False, default=float)
-    D = [x for x in L if x["done"] and x.get("R") is not None]
-
-    def st(g):
-        return {"n": len(g), "pump": round(100 * np.mean([y.get("pump", 0) for y in g]), 1) if g else None,
-                "avg_R": round(float(np.mean([y["R"] for y in g])), 3) if g else None}
-    return {"all": st(D), "rule": st([y for y in D if y.get("rules")]), "trending": st([y for y in D if y.get("trending")]),
-            "not_trending": st([y for y in D if not y.get("trending")]), "open": sum(1 for x in L if not x["done"])}
-
-
 # ---------------------------------------------------------------- analiz
 def compare(E, split):
     res = []

@@ -10,7 +10,7 @@ import telegram  # noqa: E402
 
 API = "https://api.hetzner.cloud/v1"
 H = {"Authorization": f"Bearer {os.environ['HCLOUD_TOKEN']}", "Content-Type": "application/json"}
-NAME, IPNAME, DC = "kripto-bot", "kripto-ip", "nbg1-dc3"
+NAME, IPNAME, LOC = "kripto-bot", "kripto-ip", "nbg1"
 TYPES = ["cx23", "cx22", "cpx22", "cpx11", "cax11"]
 CHAT = os.environ.get("TELEGRAM_CHAT_ID")
 
@@ -35,7 +35,7 @@ def get_ip():
 
 def step_ip():
     p = get_ip() or call("POST", "/primary_ips", json={"name": IPNAME, "type": "ipv4", "assignee_type": "server",
-                                                         "datacenter": DC, "auto_delete": False})["primary_ip"]
+                                                         "location": LOC, "auto_delete": False})["primary_ip"]
     say(f"🖥️ Sunucu IP adresi ayrıldı: {p['ip']}\nBinance API anahtarını oluştururken 'Restrict access to trusted IPs only' kısmına bunu yazın.")
 
 
@@ -67,7 +67,7 @@ def step_kur():
     last = None
     for t in TYPES:
         try:
-            r = call("POST", "/servers", json={"name": NAME, "server_type": t, "image": "ubuntu-24.04", "datacenter": DC,
+            r = call("POST", "/servers", json={"name": NAME, "server_type": t, "image": "ubuntu-24.04", "location": LOC,
                                                 "public_net": {"enable_ipv4": True, "enable_ipv6": True, "ipv4": p["id"]},
                                                 "user_data": user_data()})
             break

@@ -12,7 +12,8 @@ API = "https://api.hetzner.cloud/v1"
 H = {"Authorization": f"Bearer {os.environ['HCLOUD_TOKEN']}", "Content-Type": "application/json"}
 NAME, IPNAME, LOC = "kripto-bot", "kripto-ip", "nbg1"
 TYPES = ["cx23", "cx22", "cpx22", "cpx11", "cax11"]
-CHAT = os.environ.get("TELEGRAM_CHAT_ID")
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CHAT = os.environ.get("TELEGRAM_CHAT_ID") or str(json.load(open(os.path.join(ROOT, "state", "futures.json"))).get("chat_id") or "")
 
 
 def call(m, path, **kw):

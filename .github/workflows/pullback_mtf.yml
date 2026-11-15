@@ -1,0 +1,40 @@
+name: Geri çekilme çoklu zaman dilimi
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: pbmtf
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip, cache-dependency-path: bot/requirements.txt }
+      - run: pip install -r bot/requirements.txt
+      - uses: actions/cache@v4
+        with:
+          path: data/cache
+          key: pbmtf-${{ github.run_id }}
+          restore-keys: |
+            pbmtf-
+            balina-
+            uc-
+            donus-
+      - name: Analiz
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python bot/pullback_mtf.py
+      - name: Kaydet
+        run: |
+          git config user.name "kripto-bot"
+          git config user.email "kripto-bot@users.noreply.github.com"
+          git add state/pullback_mtf.json docs/arastirma
+          git diff --cached --quiet && exit 0
+          git commit -m "geri çekilme çoklu zaman dilimi" -q
+          for i in 1 2 3 4 5; do git pull --rebase -q && git push -q && exit 0; sleep 7; done
+          exit 1

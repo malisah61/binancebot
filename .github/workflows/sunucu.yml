@@ -3,11 +3,11 @@ on:
   workflow_dispatch:
     inputs:
       adim:
-        description: "ip = IP ayır · kur = sunucuyu kur · sil = sunucuyu sil"
+        description: "ip = IP ayır · kur = sunucuyu kur · sil = sunucuyu sil · durum = kontrol"
         required: true
         default: ip
         type: choice
-        options: [ip, kur, sil]
+        options: [ip, kur, sil, durum]
 permissions:
   contents: read
 jobs:

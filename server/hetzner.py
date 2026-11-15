@@ -90,5 +90,14 @@ def step_sil():
     say("Silinecek sunucu yok.")
 
 
+def step_durum():
+    S = call("GET", "/servers", params={"name": NAME})["servers"]
+    if not S:
+        say("Sunucu yok.")
+        return
+    s = S[0]
+    say(f"🖥️ Sunucu durumu: {s['status']} · {s['server_type']['name']} · IP {s['public_net']['ipv4']['ip']} · açılış {s['created'][:16].replace('T', ' ')} UTC")
+
+
 if __name__ == "__main__":
-    {"ip": step_ip, "kur": step_kur, "sil": step_sil}[sys.argv[1]]()
+    {"ip": step_ip, "kur": step_kur, "sil": step_sil, "durum": step_durum}[sys.argv[1]]()

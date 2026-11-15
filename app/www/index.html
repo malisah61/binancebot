@@ -133,6 +133,17 @@ async function loadDaily() { try { const r = await fetch(`https://raw.githubuser
 loadDaily();
 async function loadRev() { try { const r = await fetch(`https://raw.githubusercontent.com/${repoName()}/main/state/reversal.json?t=${Date.now()}`); if (r.ok) S.rev = await r.json(); } catch (e) {} }
 loadRev();
+async function loadExt() { try { const r = await fetch(`https://raw.githubusercontent.com/${repoName()}/main/state/extreme.json?t=${Date.now()}`); if (r.ok) S.ext = await r.json(); } catch (e) {} }
+loadExt();
+function extOverview() {
+  const X = S.ext; if (!X) return "";
+  const EVN = { crash: "Sert düşüş", ctpump: "Trend tersi pompa" };
+  const st = (s) => s && s.n ? `${s.n} işlem · %${s.win} kazanç · ort ${s.avg_R}R · PF ${s.pf}` : "işlem yok";
+  const picks = Object.entries(X.picks || {}).map(([ev, p]) => `<div class="why"><b>${EVN[ev]}:</b> ${p.desc} (≥%${Math.round(p.th * 100)}, ${p.tiers.join("/")}) — ${p.adopted ? '<b class="up">testte doğrulandı</b>' : '<b class="dn">testte tutmadı, kâğıt deneme</b>'}<br><span class="mut sm">TEST: ${st(p.test)}</span></div>`).join("");
+  const sc = (X.scan || []).slice(0, 15).map((x) => `<div class="feat coin" data-s="${x.sym}"><div class="row between"><b>${x.sym.replace("USDT", "")} <span class="mut sm">${x.tier}</span></b><span class="mut sm">${x.hours_ago} saat önce</span></div>
+      <div class="why"><span class="${x.ev === "crash" ? "dn" : "up"}">${EVN[x.ev]} %${x.size.toFixed(1)}</span>${x.pick ? ` · kâğıt <b>${x.pick.dir}</b>` : ""}</div></div>`).join("");
+  return `<div class="card"><h3>⚡ Uç hareketler (${X.coins} coin, küçükler dahil)</h3>${picks}${sc || '<div class="mut sm">Son 26 saatte uç hareket yok.</div>'}</div>`;
+}
 function revOverview() {
   const R = S.rev; if (!R) return "";
   const sc = (R.scan || []).slice().sort((a, b) => a.hours_ago - b.hours_ago);
@@ -274,13 +285,13 @@ function dailyOverview() {
     ${act.slice(0, 15).map((x) => `<div class="feat coin" data-s="${x.symbol}"><b>${x.symbol.replace("USDT", "")}</b> <span class="mut sm">${fmt(x.price)}</span><div class="why">${x.events.map((e) => `${e.dir > 0 ? "🟢" : "🔴"} ${e.name} <span class="${VCOL[e.verdict] || ""}">(${e.verdict})</span>`).join(" · ")}</div></div>`).join("") || '<div class="mut sm">Son 10 günde formasyon yok.</div>'}</div>`;
 }
 function renderOpp() {
-  if (!Object.keys(S.series).length) { $("opp").innerHTML = revOverview() + dailyOverview() + '<div class="warn">Liderlerle korelasyon analizi için Tarama sekmesinde "Tara"ya bas.</div>'; return; }
+  if (!Object.keys(S.series).length) { $("opp").innerHTML = extOverview() + revOverview() + dailyOverview() + '<div class="warn">Liderlerle korelasyon analizi için Tarama sekmesinde "Tara"ya bas.</div>'; return; }
   if (!S.lag || S.lagTf !== S.tf) { S.lag = TA.laggards(S.series, WIN[S.tf] || 24); S.lagTf = S.tf; }
   const L = S.lag; const by = Object.fromEntries(S.results.map((a) => [a.symbol, a]));
-  if (!L.leaders.length) { $("opp").innerHTML = revOverview() + dailyOverview() + '<div class="card">Şu an bu periyotta yükselen lider coin yok; piyasa genel düşüşte. Fırsat analizi yükseliş dönemlerinde anlamlı.</div>'; return; }
+  if (!L.leaders.length) { $("opp").innerHTML = extOverview() + revOverview() + dailyOverview() + '<div class="card">Şu an bu periyotta yükselen lider coin yok; piyasa genel düşüşte. Fırsat analizi yükseliş dönemlerinde anlamlı.</div>'; return; }
   const cands = L.list.filter((x) => x.corr >= 0.5 && x.gap > 0.01 && by[x.symbol] && by[x.symbol].score >= 43);
   const winTxt = {"15m": "son 24 saat", "30m": "son 24 saat", "1h": "son 24 saat", "4h": "son 24 saat", "1d": "son 3 gün"}[S.tf];
-  $("opp").innerHTML = revOverview() + dailyOverview() + `<div class="card"><h3>🚀 Liderler (${winTxt})</h3><div class="row">${L.leaders.map((x) => `<span class="tag" style="font-size:13px">${x.symbol.replace("USDT", "")} <span class="up">${pct(x.ret, 1)}</span></span>`).join("")}</div>
+  $("opp").innerHTML = extOverview() + revOverview() + dailyOverview() + `<div class="card"><h3>🚀 Liderler (${winTxt})</h3><div class="row">${L.leaders.map((x) => `<span class="tag" style="font-size:13px">${x.symbol.replace("USDT", "")} <span class="up">${pct(x.ret, 1)}</span></span>`).join("")}</div>
     <div class="why mut sm" style="margin-top:8px">Bu liderlerle geçmişte <b>birlikte hareket eden</b> (korelasyon ≥ 0.5) ama bu yükselişe <b>henüz katılmamış</b> coinler aşağıda. Beklenen hareket = beta × liderlerin ortalama yükselişi. Geride kalma her zaman yetişme anlamına gelmez; skor ve tetikleyicilere de bak.</div></div>` +
     (cands.length ? cands.slice(0, 25).map((x) => { const a = by[x.symbol]; return `<div class="card coin" data-s="${x.symbol}" style="padding:12px">
       <div class="row between"><b style="font-size:16px">${x.symbol.replace("USDT", "")}</b>${badge(a.decision)}</div>
@@ -573,7 +584,7 @@ $("filt").onclick = (e) => { const c = e.target.closest(".chip"); if (!c) return
 const openFrom = (e) => { const c = e.target.closest("[data-s]"); if (c) openDetail(c.dataset.s); };
 $("list").onclick = openFrom; $("opp").onclick = openFrom; $("sigList").onclick = openFrom; $("bPos").onclick = openFrom;
 $("sigVal").onclick = validate; $("sigClr").onclick = () => { if (confirm("Tüm sinyal kaydı silinsin mi?")) { saveSigs([]); renderSigs(); } };
-$("repoSave").onclick = () => { localStorage.setItem("repo", $("repo").value.trim()); loadModel(); loadDaily(); loadRev(); loadBot(); };
+$("repoSave").onclick = () => { localStorage.setItem("repo", $("repo").value.trim()); loadModel(); loadDaily(); loadRev(); loadExt(); loadBot(); };
 try { const ls = JSON.parse(localStorage.getItem("lastScan5")); if (ls && Date.now() - ls.time < 6 * 3600e3) { S.results = ls.results; S.futOk = ls.futOk; $("tf").value = ls.tf; S.tf = ls.tf; $("hdrInfo").textContent = new Date(ls.time).toLocaleTimeString("tr-TR", {hour: "2-digit", minute: "2-digit"}) + " · " + ls.tf + " (kayıtlı)"; render(); } } catch (e) {}
 </script>
 </body>

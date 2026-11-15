@@ -39,7 +39,7 @@ jobs:
               for j in 1 2 3 4; do git pull --rebase -q && git push -q && break; sleep 6; done
             fi
             el=$(( $(date +%s) - start ))
-            [ $i -lt 22 ] && sleep $(( el < 900 ? 900 - el : 1 ))
+            if [ $i -lt 22 ]; then sleep $(( el < 900 ? 900 - el : 1 )); fi   # son turda "[ ] &&" çıkış kodu 1 verip işi hatalı gösteriyordu
           done
       - name: Döngüyü yeniden başlat
         if: always()

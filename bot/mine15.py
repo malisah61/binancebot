@@ -23,16 +23,34 @@ def _first(m):
     return int(m.argmax()) if m.any() else 10 ** 9
 
 
-def label(h, l, c, atr, idx, d):
-    """Olay başına net R (bağımsız, çakışma serbest)."""
+def label(h, l, c, atr, idx, d, limit_k=None, expire=6, o=None):
+    """Olay başına net R (bağımsız, çakışma serbest).
+    limit_k verilirse: giriş = fiyatın k ATR gerisine limit emir; `expire` mum içinde dolmazsa NaN (işlem yok).
+    Doluş mumunda stop da görüldüyse kötümser: stop."""
     out = np.full(len(idx), np.nan)
     n = len(c)
     for k, (i, dd) in enumerate(zip(idx, d)):
         if i >= n - 2 or not np.isfinite(atr[i]) or atr[i] <= 0:
             continue
-        e, A = c[i], atr[i]
+        A = atr[i]
+        if limit_k is None:
+            e, start = c[i], i + 1
+        else:
+            e = c[i] - dd * limit_k * A
+            w = (l[i + 1:i + 1 + expire] <= e) if dd > 0 else (h[i + 1:i + 1 + expire] >= e)
+            if not w.any():
+                continue
+            f = i + 1 + int(w.argmax())
+            if o is not None:
+                e = min(e, o[f]) if dd > 0 else max(e, o[f])
+            sl0 = e - dd * SL_M * A
+            if (dd > 0 and l[f] <= sl0) or (dd < 0 and h[f] >= sl0):
+                out[k] = -1.0 - FEE_RT / (SL_M * A / e)
+                continue
+            start = f + 1
         sl, t1, t2 = e - dd * SL_M * A, e + dd * TP1_M * A, e + dd * TP2_M * A
-        H, L = h[i + 1:i + 1 + HOLD], l[i + 1:i + 1 + HOLD]
+        H, L = h[start:start + HOLD], l[start:start + HOLD]
+        i = start - 1
         if dd > 0:
             js, j1, j2 = _first(L <= sl), _first(H >= t1), _first(H >= t2)
         else:
@@ -100,7 +118,7 @@ def cond_mask(F, cond):
     return (x >= th) if op == ">=" else (x <= th)
 
 
-def mine(coins, split_t, lt=55, st=45, max_rules=5, min_frac=0.03, beam=6):
+def mine(coins, split_t, lt=55, st=45, max_rules=5, min_frac=0.03, beam=6, limit_k=None):
     """coins: {sym: (df, R, fm)} 15dk. Dönen: kural listesi [{'conds':[...], 'train':..., 'halves':...}]"""
     rows = []
     btcR = coins.get("BTCUSDT", (None, None, None))[1]
@@ -118,13 +136,16 @@ def mine(coins, split_t, lt=55, st=45, max_rules=5, min_frac=0.03, beam=6):
         if btcR is not None:
             R["btc4"] = btc_trend(btcR, R["t"].values)
         F = features(R, d)
-        y = label(df["h"].values.astype(float), df["l"].values.astype(float), df["c"].values.astype(float), R["atr"].values.astype(float), idx, d[idx])
+        y = label(df["h"].values.astype(float), df["l"].values.astype(float), df["c"].values.astype(float), R["atr"].values.astype(float), idx, d[idx],
+                  limit_k=limit_k, o=df["o"].values.astype(float))
         part = {k: v[idx] for k, v in F.items()}
         part["y"], part["t"] = y, R["t"].values[idx]
         rows.append(pd.DataFrame(part))
     E = pd.concat(rows).dropna(subset=["y"])
     E = E.replace([np.inf, -np.inf], np.nan).dropna()
     tr = E[E["t"] < split_t]
+    te0 = E[E["t"] >= split_t]
+    compare = win_loss_compare(tr, te0)
     mid = tr["t"].median()
     base = float(tr["y"].mean())
     nmin = max(400, int(len(tr) * min_frac))
@@ -194,7 +215,23 @@ def mine(coins, split_t, lt=55, st=45, max_rules=5, min_frac=0.03, beam=6):
         r["test_events"] = {"avg_R": round(float(te["y"].values[m].mean()), 3) if m.any() else None, "n": int(m.sum())}
         r["text"] = rule_text(r["conds"])
     return {"base_train_avg_R": round(base, 3), "base_test_avg_R": round(float(te["y"].mean()), 3), "events_train": int(len(tr)),
-            "events_test": int(len(te)), "rules": out}
+            "events_test": int(len(te)), "rules": out, "compare": compare, "limit_k": limit_k,
+            "win_rate_train": round(float((tr["y"] > 0).mean() * 100), 1), "win_rate_test": round(float((te["y"] > 0).mean() * 100), 1)}
+
+
+def win_loss_compare(tr, te):
+    """Kazanan ve kaybeden girişlerin o anki özelliklerini kıyasla (eğitim ve test ayrı; etki = std. fark)."""
+    res = []
+    for f in FEATS:
+        row = {"feat": f, "name": NAMES[f]}
+        for tag, D in (("train", tr), ("test", te)):
+            w, l = D.loc[D["y"] > 0, f], D.loc[D["y"] <= 0, f]
+            sd = float(D[f].std()) or 1e-9
+            row[tag] = {"win": round(float(w.mean()), 3), "loss": round(float(l.mean()), 3), "d": round(float((w.mean() - l.mean()) / sd), 3)}
+        row["stable"] = bool(np.sign(row["train"]["d"]) == np.sign(row["test"]["d"]) and abs(row["test"]["d"]) >= 0.03)
+        res.append(row)
+    res.sort(key=lambda r: -abs(r["train"]["d"]))
+    return res
 
 
 def rule_text(conds):

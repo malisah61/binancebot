@@ -302,6 +302,25 @@ def pullback_levels(R, d, st):
     return entry, sl, tp1, tp2, ok
 
 
+def order_levels(R, d, st):
+    """Limit emirli stratejiler için seviyeler (pullback: yapısal; rules+limit: ATR tabanlı)."""
+    if st.get("type") == "pullback":
+        return pullback_levels(R, d, st)
+    c = R["c"].values.astype(float)
+    A = R["atr"].values.astype(float)
+    k = st.get("limit", 0.5)
+    e = c - d * k * A
+    sl = e - d * st.get("sl", 1.0) * A
+    t1 = e + d * st.get("tp1", 1.5) * A
+    t2 = e + d * st.get("tp2", 2.5) * A
+    ok = (d != 0) & np.isfinite(e) & np.isfinite(A) & (A > 0)
+    return e, sl, t1, t2, ok
+
+
+def uses_limit(st):
+    return st.get("type") == "pullback" or st.get("limit") is not None
+
+
 def strategy_name(st):
     t = st.get("type")
     ex = f"SL{st.get('sl')}/TP{st.get('tp1')}-{st.get('tp2')}"
@@ -318,5 +337,6 @@ def strategy_name(st):
                 f"hedef {st.get('tp1', 1.5)}R / {st.get('tp2', 2.5)}R){h}")
     if t == "rules":
         import mine15
-        return f"Kazanan ortak noktaları kuralı (skor ≥{st.get('lt', 55)} / ≤{st.get('st', 45)} VE {mine15.rule_text(st['conds'])}){h}, {ex}"
+        lim = f", fiyatın {st['limit']} ATR gerisine limit emirle giriş ({st.get('expire', 6)} mum geçerli)" if st.get("limit") is not None else ""
+        return f"Kazanan ortak noktaları kuralı (skor ≥{st.get('lt', 55)} / ≤{st.get('st', 45)} VE {mine15.rule_text(st['conds'])}){lim}{h}, {ex}"
     return f"Likidite avı tersine dönüş{h}, {ex}"

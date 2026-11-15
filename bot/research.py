@@ -264,9 +264,9 @@ def run_strategy(coins, tf, strat, lev, part, split_t, scores):
             sig[sym][grp["i"].values] = 0
     out = []
     for sym, (df, R, fm) in coins.items():
-        if strat["type"] == "pullback":
+        if v5.uses_limit(strat):
             d = sig[sym]
-            e, sl, t1, t2, ok = v5.pullback_levels(R, d, strat)
+            e, sl, t1, t2, ok = v5.order_levels(R, d, strat)
             idx = np.flatnonzero(ok)
             orders = [(int(i), int(d[i]), float(e[i]), float(sl[i]), float(t1[i]), float(t2[i]), strat.get("expire", 6), None) for i in idx]
             tr = sim.simulate_levels(df["t"].values, df["o"].values.astype(float), df["h"].values.astype(float), df["l"].values.astype(float),
@@ -440,16 +440,20 @@ def run(raw, today, t0=None):
         # 4) STRATEJİ YARIŞMASI (yalnız canlıda da hesaplanabilen veriler)
         live_scores = {sym: score_with(R, LIVE_W) for sym, (df, R, fm) in coins.items()}
         extra = []
-        if tf == "15m":  # kazanan işlemlerin ortak noktaları (yalnız eğitimde bulunur)
-            try:
-                mined = mine15.mine(coins, split_t)
-                out["mined"] = mined
-                for r in mined["rules"]:
-                    extra.append({"type": "rules", "lt": 55, "st": 45, "conds": r["conds"], "htf": None,
-                                  "sl": 1.0, "tp1": 1.5, "tp2": 2.5, "max_new": 3})
-                print("15m kural madenciliği:", json.dumps(mined, ensure_ascii=False)[:1500])
-            except Exception as e:
-                print("kural madenciliği hatası:", e)
+        if tf in ("15m", "1h"):  # kazanan işlemlerin ortak noktaları (yalnız eğitimde bulunur); piyasa ve limit girişli
+            out["mined"] = {}
+            for mode, lk in (("piyasa", None), ("limit", 0.5)):
+                try:
+                    mined = mine15.mine(coins, split_t, limit_k=lk)
+                    out["mined"][mode] = mined
+                    for r in mined["rules"]:
+                        stg = {"type": "rules", "lt": 55, "st": 45, "conds": r["conds"], "htf": None, "sl": 1.0, "tp1": 1.5, "tp2": 2.5, "max_new": 3}
+                        if lk is not None:
+                            stg.update(limit=lk, expire=6)
+                        extra.append(stg)
+                    print(f"{tf} kural madenciliği ({mode}):", json.dumps({k: v for k, v in mined.items() if k != "compare"}, ensure_ascii=False)[:1200])
+                except Exception as e:
+                    print("kural madenciliği hatası:", e)
         res = []
         for stg in strategy_grid() + extra:
             stt = sim.stats(run_strategy(coins, tf, stg, 5, "train", split_t, live_scores))
@@ -534,13 +538,17 @@ def to_markdown(rep):
             t5, t10 = x["test"]["5"], x["test"]["10"]
             L.append(f"| {i} | {x['name']} | {x['train']['avg_R']} ({x['train']['n']}) | {_f(t5.get('avg_R'))} | %{_f(t5.get('win'))} ({t5.get('n')}) | {_f(t5.get('pf'))} | %{_f(t5.get('avg_roe'))} | %{_f(t10.get('avg_roe'))} | {_f(t10.get('liq'))} |")
         L.append("")
-    m = rep["tfs"].get("15m", {}).get("mined")
-    if m:
-        L += ["", "## 5. 15dk: kazanan işlemlerin ortak noktaları (eğitimde bulundu)", "",
-              f"Tüm olaylar: eğitim ort. net R {m['base_train_avg_R']} ({m['events_train']} olay), test {m['base_test_avg_R']} ({m['events_test']} olay)", "",
-              "| Kural | Eğitim ort R (n) | Eğitim 1./2. yarı | TEST olay ort R (n) |", "|---|---|---|---|"]
-        for r in m["rules"]:
-            L.append(f"| {r['text']} | {r['train']['avg_R']} ({r['train']['n']}) | {r['halves'][0]} / {r['halves'][1]} | {r['test_events']['avg_R']} ({r['test_events']['n']}) |")
+    for tf_m in ("15m", "1h"):
+        for mode, m in (rep["tfs"].get(tf_m, {}).get("mined") or {}).items():
+            L += ["", f"## 5. {tf_m} ({mode} girişli): kazananlar ve kaybedenler", "",
+                  f"Tüm olaylar: kazanma %{m['win_rate_train']} (eğitim) / %{m['win_rate_test']} (test); ort. net R {m['base_train_avg_R']} / {m['base_test_avg_R']}", "",
+                  "**Kazanan vs kaybeden girişte o anki durum** (etki = standart fark; ✓ = test döneminde de aynı yönde)", "",
+                  "| Özellik | Kazananlarda | Kaybedenlerde | Etki (eğitim) | Etki (test) | |", "|---|---|---|---|---|---|"]
+            for r in m["compare"][:10]:
+                L.append(f"| {r['name']} | {r['train']['win']} | {r['train']['loss']} | {r['train']['d']:+.3f} | {r['test']['d']:+.3f} | {'✓' if r['stable'] else '✗'} |")
+            L += ["", "| Kural | Eğitim ort R (n) | Eğitim 1./2. yarı | TEST olay ort R (n) |", "|---|---|---|---|"]
+            for r in m["rules"]:
+                L.append(f"| {r['text']} | {r['train']['avg_R']} ({r['train']['n']}) | {r['halves'][0]} / {r['halves'][1]} | {r['test_events']['avg_R']} ({r['test_events']['n']}) |")
     L += ["", "IC (bilgi katsayısı): gösterge puanı ile sonraki getiri arasındaki sıralama korelasyonu. Piyasada 0.02–0.05 bile anlamlıdır; negatif ise gösterge ters çalışıyor demektir.",
           "Geçmiş performans geleceği garanti etmez."]
     return "\n".join(L)

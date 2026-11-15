@@ -353,8 +353,8 @@ def main():
                 val = R[f].iloc[-1]
                 snap[f] = round(float(val), 2) if np.isfinite(val) else None
             lv = None
-            if st.get("type") == "pullback" and d[-1] != 0:
-                e_, sl_, t1_, t2_, ok_ = v5.pullback_levels(R.iloc[-1:].reset_index(drop=True), d[-1:], st)
+            if v5.uses_limit(st) and d[-1] != 0:
+                e_, sl_, t1_, t2_, ok_ = v5.order_levels(R.iloc[-1:].reset_index(drop=True), d[-1:], st)
                 if ok_[0]:
                     lv = (float(e_[0]), float(sl_[0]), float(t1_[0]), float(t2_[0]))
             for f in ("f_pos", "f_from_lo", "f_from_hi"):
@@ -380,7 +380,7 @@ def main():
                     break
                 if s in busy:
                     continue
-                if st.get("type") == "pullback":
+                if v5.uses_limit(st):
                     if lv is None:
                         continue
                     created = int(row["t"]) + v5.TF_MS[tf]

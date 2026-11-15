@@ -163,6 +163,8 @@ function botSignal(m, comps, tf) {
       const fails = (st.conds || []).filter(([f, op, th]) => !(op === ">=" ? F[f] >= th : F[f] <= th));
       why = `canlı skor ${score.toFixed(0)} · ` + (fails.length ? "uymayan koşul: " + fails.map(([f, op, th]) => `${NM[f] || f} ${F[f].toFixed(2)} (${op === ">=" ? "≥" : "≤"} ${th.toFixed(2)} olmalı)`).join(", ") : "kazanan ortak noktalarının hepsi sağlanıyor");
       if (fails.length) dir = 0;
+      if (dir && st.limit != null) { const A = m.atr, e = m.price - dir * st.limit * A, sl = e - dir * (st.sl ?? 1) * A;
+        limit = {entry: e, sl, tp1: e + dir * (st.tp1 ?? 1.5) * A, tp2: e + dir * (st.tp2 ?? 2.5) * A, expire: st.expire ?? 6, riskPct: Math.abs(e - sl) / e * 100}; }
     } else why = `canlı skor ${score.toFixed(0)}: yön yok`;
   }
   else { dir = ssl1 ? 1 : bsl1 ? -1 : 0; strength = Math.abs(m.ext); why = dir ? (dir > 0 ? "bu mumda SSL likidite avı" : "bu mumda BSL likidite avı") : "bu mumda likidite avı yok"; }
@@ -271,7 +273,7 @@ async function loadDetail(sym, seq) {
   const bk = book ? {bids: book.bids.map((x) => [+x[0], +x[1]]), asks: book.asks.map((x) => [+x[0], +x[1]])} : null;
   const trades = tr ? tr.map((x) => ({p: +x.p, q: +x.q, m: x.m, T: x.T})) : null;
   const a = TA.analyze(k, {htfMs: TFMS[tf] * 4, tfMs: TFMS[tf], oi, gls, tls, funding: perp ? S.perps[sym] : null, book: bk, trades, ...modelOpt(tf)});
-  { const B = botStrategy(tf); const st = B.st, A = a.metrics.atr, d = a.plan.dir, e = a.price; const m = B.adopted && st.type !== "pullback" && st.sl ? [st.sl, st.tp1, st.tp2] : [1.5, 1.5, 3];
+  { const B = botStrategy(tf); const st = B.st, A = a.metrics.atr, d = a.plan.dir, e = a.price; const m = B.adopted && st.type !== "pullback" && st.limit == null && st.sl ? [st.sl, st.tp1, st.tp2] : [1.5, 1.5, 3];
     a.plan = {...a.plan, sl: e - d * m[0] * A, tp1: e + d * m[1] * A, tp2: e + d * m[2] * A, m}; }
   a.symbol = sym; a.tf = tf; a.perp = perp; a.btc = btc; a.live = S.det && S.det.symbol === sym ? S.det.live : null;
   S.det = a; recordSignal(a, sym, tf, perp); renderDetail();
@@ -407,7 +409,7 @@ function renderDetail() {
     <div><span class="dn">SL (${P.m[0]}×ATR)</span><b>${fmt(P.sl)} <small class="dn">${pctOf(P.sl)}</small></b></div><div><span>Risk</span><b>1R</b></div>
     <div><span class="up">TP1 (${P.m[1]}×ATR)</span><b>${fmt(P.tp1)} <small class="up">${pctOf(P.tp1)}</small></b></div><div><span>R/Ö</span><b>1 : ${(P.m[1] / P.m[0]).toFixed(1)}</b></div>
     <div><span class="up">TP2 (${P.m[2]}×ATR)</span><b>${fmt(P.tp2)} <small class="up">${pctOf(P.tp2)}</small></b></div><div><span>R/Ö</span><b>1 : ${(P.m[2] / P.m[0]).toFixed(1)}</b></div></div>
-    <div class="mut sm" style="margin-top:6px">${a.decision === "NEUTRAL" ? "Karar NEUTRAL: plan sadece bilgi amaçlı, işlem sinyali yok." : botStrategy(a.tf).st.type === "pullback" ? "Bilgi amaçlı piyasa planı. Botun asıl planı aşağıdaki limit giriş planıdır (geri çekilme bekler, yapısal stop)." : "TP1'de yarısını kapat, stop'u girişe çek; kalanı TP2'ye bırak."}</div></div>
+    <div class="mut sm" style="margin-top:6px">${a.decision === "NEUTRAL" ? "Karar NEUTRAL: plan sadece bilgi amaçlı, işlem sinyali yok." : (botStrategy(a.tf).st.type === "pullback" || botStrategy(a.tf).st.limit != null) ? "Bilgi amaçlı piyasa planı. Botun asıl planı aşağıdaki limit giriş planıdır (geri çekilme bekler, yapısal stop)." : "TP1'de yarısını kapat, stop'u girişe çek; kalanı TP2'ye bırak."}</div></div>
   ${botCard(a)}
   ${opp}
   <div class="card"><h3>📋 Kararı tetikleyen koşullar</h3>${a.triggers.length ? a.triggers.map((t) => `<div class="trig"><span>${t.dir > 0 ? "🟢" : t.dir < 0 ? "🔴" : "🟡"}</span><span>${t.text}</span></div>`).join("") : '<div class="mut">Belirgin bir tetikleyici yok; piyasa kararsız.</div>'}</div>

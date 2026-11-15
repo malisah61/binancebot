@@ -252,6 +252,22 @@ def handle_commands(state, px, latest):
             continue
         if chat != state["chat_id"]:
             continue
+        if txt.startswith("/gercek"):
+            path = os.path.join(ROOT, "state", "gercek_kontrol.json")
+            ctl = json.load(open(path)) if os.path.exists(path) else {}
+            if "kapat" in txt:
+                ctl.update(paused=True, close_all_t=now_ms())
+                telegram.send(chat, "⏹ GERÇEK hesap: tüm pozisyonları kapatma ve durdurma komutu sunucuya iletildi (en geç ~10 dk).")
+            elif "dur" in txt:
+                ctl["paused"] = True
+                telegram.send(chat, "⏸ GERÇEK hesap: yeni işlem açma durduruluyor (en geç ~10 dk). Açık işlemler stop/hedefleriyle sürer.")
+            elif "devam" in txt:
+                ctl["paused"] = False
+                telegram.send(chat, "▶️ GERÇEK hesap: işlem açma devam edecek (en geç ~10 dk).")
+            else:
+                telegram.send(chat, "Komutlar: /gercekdur · /gercekdevam · /gercekkapat (hepsini kapat)")
+            json.dump(ctl, open(path, "w"))
+            continue
         if txt.startswith(("/durum", "/start")):
             telegram.send(chat, status_text(state, px) + ("\n\n" + executor.status(DS) if DS else ""))
         elif txt.startswith("/demo") and DS is not None:

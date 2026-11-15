@@ -646,7 +646,7 @@ def main():
         ledger = None
     rep = {"time": int(time.time() * 1000), "coins": len(data), "split": int(split),
            "n_events": {ev: int(((E["ev"] == ev) & (E["th"] == (DROPS if ev == "crash" else PUMPS)[0])).sum()) for ev in VARIANTS}, "grid": G, "picks": picks, "compare": cmps,
-           "scan": scan, "regime_now": regime_now, "ledger": ledger}
+           "scan": scan, "regime_now": regime_now, "ledger": ledger, "rank_hist": rank}
     json.dump(rep, open(os.path.join(ROOT, "state", "extreme.json"), "w"), ensure_ascii=False, default=float)
     md = to_md(rep)
     path = f"docs/gunluk/uc-hareket-{(today + timedelta(hours=3)):%Y-%m-%d}.md"

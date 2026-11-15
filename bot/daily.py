@@ -176,7 +176,7 @@ def report(stats, sc, today):
         evs = "; ".join(f"{'🟢' if e['dir'] > 0 else '🔴'} {e['name']} ({e['date']}{', geçmişte ' + e['verdict'] if e.get('verdict') else ''})" for e in x["events"])
         L.append(f"- **{x['symbol'].replace('USDT', '')}** {fmt(x['price'])} — {evs}. Trend: {tr['structure']}, "
                  f"{'EMA200 üstü' if tr['above200'] else 'EMA200 altı'}. Yıllık aralığın %{int(lv['range_pos'] * 100)}'inde "
-                 f"(tepeden %{lv['from_hi']}). Destek {', '.join(fmt(s) for s in lv['support'][:2]) or '-'} · direnç {', '.join(fmt(s) for s in lv['resistance'][:2]) or '-'}"
+                 f"(tepeden %{lv['from_hi']}). Destek {', '.join(fmt(s) for s in lv['support'][:2]) or 'yok (fiyat 180 günün tüm hacim bölgelerinin altında)'} · direnç {', '.join(fmt(s) for s in lv['resistance'][:2]) or '-'}"
                  + (f" · alıcı bölgesi {fmt(lv['accumulation']['price'])}" if lv.get("accumulation") else ""))
     L += ["", "Simülasyon/araştırmadır, yatırım tavsiyesi değildir."]
     return "\n".join(L)

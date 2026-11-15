@@ -10,7 +10,7 @@ STABLE = {"USDC", "FDUSD", "TUSD", "BUSD", "DAI", "USDP", "EUR", "EURI", "AEUR",
 # Kripto olmayan varlıklar (tokenize hisse/emtia) — farklı piyasa saatleri ve dinamikleri var
 NON_CRYPTO = {"MSTRB", "SPCXB", "SNDKB", "TSLAB", "NVDAB", "AAPLB", "COINB", "HOODB", "AMZNB", "GOOGLB", "GOOGB", "METAB",
               "MSFTB", "CRCLB", "SPYB", "QQQB", "PLTRB", "AMDB", "NFLXB", "INTCB", "ORCLB", "AVGOB", "BABAB", "GMEB", "MUB",
-              "SNOWB", "UBERB", "SHOPB", "IBMB", "DISB", "BRKB", "JPMB", "VB", "MAB", "XAU", "XAG", "U"}
+              "SNOWB", "SOXLB", "TQQQB", "UBERB", "SHOPB", "IBMB", "DISB", "BRKB", "JPMB", "VB", "MAB", "XAU", "XAG", "U"}
 _session = requests.Session()
 
 

@@ -129,6 +129,26 @@ function modelOpt(tf) { const m = S.model && S.model.tfs && S.model.tfs[tf]; ret
 async function loadModel() { try { const r = await fetch(`https://raw.githubusercontent.com/${repoName()}/main/state/model.json?t=${Date.now()}`); if (r.ok) { S.model = await r.json(); localStorage.setItem("model5", JSON.stringify(S.model)); } } catch (e) {} }
 try { S.model = JSON.parse(localStorage.getItem("model5") || "null"); } catch (e) {}
 loadModel();
+async function loadDaily() { try { const r = await fetch(`https://raw.githubusercontent.com/${repoName()}/main/state/daily_patterns.json?t=${Date.now()}`); if (r.ok) S.daily = await r.json(); } catch (e) {} }
+loadDaily();
+const VCOL = {"güvenilir": "up", "işe yaramıyor": "dn", "zayıf/karışık": "gold", "az örnek": "mut"};
+function dailyCard(sym) {
+  const D = S.daily; if (!D) return "";
+  const x = (D.scan || []).find((y) => y.symbol === sym);
+  if (!x) return `<div class="card"><h3>📐 Günlük grafik (1g)</h3><div class="mut sm">Bu coin günlük taramada (hacimce ilk 40) yok.</div></div>`;
+  const lv = x.levels || {}, tr = x.trend || {};
+  const ev = x.events.length ? x.events.map((e) => { const t = e.test || {}; return `<div class="feat"><div class="row between"><b>${e.dir > 0 ? "🟢" : "🔴"} ${e.name}</b><span class="mut sm">${e.date} (${e.days_ago} gün önce)</span></div>
+      <div class="why">${e.info || ""}${e.info ? " · " : ""}Formasyon stopu ${fmt(e.stop)}, hedefi ${fmt(e.target)}.</div>
+      <div class="why">Geçmişte (görülmemiş dönem): ${t.n ?? "-"} kez, 7 günde doğru yön %${t.hit7 ?? "-"}, ort. ${t.avg_R ?? "-"}R (rastgele giriş ${t.rand_R ?? "-"}R) → <b class="${VCOL[e.verdict] || ""}">${e.verdict || "-"}</b></div></div>`; }).join("")
+    : '<div class="mut sm">Son 10 günde belirgin formasyon yok.</div>';
+  return `<div class="card"><h3>📐 Günlük grafik (1g)</h3>
+    <div class="kv"><div><span>Trend yapısı</span><b class="sm">${tr.structure || "-"}</b></div><div><span>EMA200</span><b class="${tr.above200 ? "up" : "dn"}">${tr.above200 ? "üstünde" : "altında"}</b></div>
+    <div><span>Yıllık aralıkta</span><b>%${Math.round((lv.range_pos ?? 0) * 100)}</b></div><div><span>Yıllık tepeden</span><b class="dn">${lv.from_hi ?? "-"}%</b></div>
+    <div><span>Destek</span><b class="up sm">${(lv.support || []).slice(0, 2).map(fmt).join(" · ") || "yok: hacim bölgelerinin altında"}</b></div><div><span>Direnç</span><b class="dn sm">${(lv.resistance || []).slice(0, 2).map(fmt).join(" · ") || "-"}</b></div>
+    <div><span>POC (hacim merkezi)</span><b>${fmt(lv.poc)}</b></div><div><span>Alıcı bölgesi</span><b class="up">${lv.accumulation ? fmt(lv.accumulation.price) + " (%" + lv.accumulation.buy_ratio + " alım)" : "-"}</b></div></div>
+    <div style="margin-top:6px">${ev}</div>
+    <div class="mut sm" style="margin-top:6px">Son 180 günün hacim profili ve kapanmış günlük mumlar; her gün 03:09'da güncellenir. "Alıcı bölgesi": agresif alımların en yoğun olduğu, fiyatın altındaki seviye.</div></div>`;
+}
 
 function btcDir() { const k = S.series && S.series.BTCUSDT; return k && k.length > 5 ? Math.sign(k[k.length - 1].c - k[k.length - 5].c) : 0; }
 // Botun araştırmada doğrulanmış stratejisi: bu coinde şimdi işlem açar mıydı?
@@ -233,14 +253,22 @@ function render() {
 }
 
 // ------------------------------------------------ FIRSAT (fiyatlanmamış coinler)
+function dailyOverview() {
+  const D = S.daily; if (!D) return "";
+  const rel = Object.entries(D.stats.types).filter(([, s]) => s.verdict === "güvenilir").map(([k]) => k);
+  const act = (D.scan || []).filter((x) => x.events.length).sort((a, b) => Math.min(...a.events.map((e) => e.days_ago)) - Math.min(...b.events.map((e) => e.days_ago)));
+  return `<div class="card"><h3>📐 Günlük formasyonlar (ilk 40 coin)</h3>
+    <div class="mut sm">Geçmiş testte güvenilir çıkan: ${rel.length ? rel.map((k) => D.stats.types[k].name).join(", ") : "yok (hiçbir formasyon rastgele girişten anlamlı biçimde iyi değil)"}</div>
+    ${act.slice(0, 15).map((x) => `<div class="feat coin" data-s="${x.symbol}"><b>${x.symbol.replace("USDT", "")}</b> <span class="mut sm">${fmt(x.price)}</span><div class="why">${x.events.map((e) => `${e.dir > 0 ? "🟢" : "🔴"} ${e.name} <span class="${VCOL[e.verdict] || ""}">(${e.verdict})</span>`).join(" · ")}</div></div>`).join("") || '<div class="mut sm">Son 10 günde formasyon yok.</div>'}</div>`;
+}
 function renderOpp() {
-  if (!Object.keys(S.series).length) { $("opp").innerHTML = '<div class="warn">Önce Tarama sekmesinde "Tara"ya bas (fırsat analizi taranan mum verisini kullanır).</div>'; return; }
+  if (!Object.keys(S.series).length) { $("opp").innerHTML = dailyOverview() + '<div class="warn">Liderlerle korelasyon analizi için Tarama sekmesinde "Tara"ya bas.</div>'; return; }
   if (!S.lag || S.lagTf !== S.tf) { S.lag = TA.laggards(S.series, WIN[S.tf] || 24); S.lagTf = S.tf; }
   const L = S.lag; const by = Object.fromEntries(S.results.map((a) => [a.symbol, a]));
-  if (!L.leaders.length) { $("opp").innerHTML = '<div class="card">Şu an bu periyotta yükselen lider coin yok; piyasa genel düşüşte. Fırsat analizi yükseliş dönemlerinde anlamlı.</div>'; return; }
+  if (!L.leaders.length) { $("opp").innerHTML = dailyOverview() + '<div class="card">Şu an bu periyotta yükselen lider coin yok; piyasa genel düşüşte. Fırsat analizi yükseliş dönemlerinde anlamlı.</div>'; return; }
   const cands = L.list.filter((x) => x.corr >= 0.5 && x.gap > 0.01 && by[x.symbol] && by[x.symbol].score >= 43);
   const winTxt = {"15m": "son 24 saat", "30m": "son 24 saat", "1h": "son 24 saat", "4h": "son 24 saat", "1d": "son 3 gün"}[S.tf];
-  $("opp").innerHTML = `<div class="card"><h3>🚀 Liderler (${winTxt})</h3><div class="row">${L.leaders.map((x) => `<span class="tag" style="font-size:13px">${x.symbol.replace("USDT", "")} <span class="up">${pct(x.ret, 1)}</span></span>`).join("")}</div>
+  $("opp").innerHTML = dailyOverview() + `<div class="card"><h3>🚀 Liderler (${winTxt})</h3><div class="row">${L.leaders.map((x) => `<span class="tag" style="font-size:13px">${x.symbol.replace("USDT", "")} <span class="up">${pct(x.ret, 1)}</span></span>`).join("")}</div>
     <div class="why mut sm" style="margin-top:8px">Bu liderlerle geçmişte <b>birlikte hareket eden</b> (korelasyon ≥ 0.5) ama bu yükselişe <b>henüz katılmamış</b> coinler aşağıda. Beklenen hareket = beta × liderlerin ortalama yükselişi. Geride kalma her zaman yetişme anlamına gelmez; skor ve tetikleyicilere de bak.</div></div>` +
     (cands.length ? cands.slice(0, 25).map((x) => { const a = by[x.symbol]; return `<div class="card coin" data-s="${x.symbol}" style="padding:12px">
       <div class="row between"><b style="font-size:16px">${x.symbol.replace("USDT", "")}</b>${badge(a.decision)}</div>
@@ -411,6 +439,7 @@ function renderDetail() {
     <div><span class="up">TP2 (${P.m[2]}×ATR)</span><b>${fmt(P.tp2)} <small class="up">${pctOf(P.tp2)}</small></b></div><div><span>R/Ö</span><b>1 : ${(P.m[2] / P.m[0]).toFixed(1)}</b></div></div>
     <div class="mut sm" style="margin-top:6px">${a.decision === "NEUTRAL" ? "Karar NEUTRAL: plan sadece bilgi amaçlı, işlem sinyali yok." : (botStrategy(a.tf).st.type === "pullback" || botStrategy(a.tf).st.limit != null) ? "Bilgi amaçlı piyasa planı. Botun asıl planı aşağıdaki limit giriş planıdır (geri çekilme bekler, yapısal stop)." : "TP1'de yarısını kapat, stop'u girişe çek; kalanı TP2'ye bırak."}</div></div>
   ${botCard(a)}
+  ${dailyCard(a.symbol)}
   ${opp}
   <div class="card"><h3>📋 Kararı tetikleyen koşullar</h3>${a.triggers.length ? a.triggers.map((t) => `<div class="trig"><span>${t.dir > 0 ? "🟢" : t.dir < 0 ? "🔴" : "🟡"}</span><span>${t.text}</span></div>`).join("") : '<div class="mut">Belirgin bir tetikleyici yok; piyasa kararsız.</div>'}</div>
   <div class="card"><h3>⚖️ Ağırlıklı skor bileşenleri</h3>${a.components.map((c) => { const w = Math.abs(c.score) * 50, col = c.score > 0.1 ? "var(--up)" : c.score < -0.1 ? "var(--dn)" : "var(--mut)";
@@ -532,7 +561,7 @@ $("filt").onclick = (e) => { const c = e.target.closest(".chip"); if (!c) return
 const openFrom = (e) => { const c = e.target.closest("[data-s]"); if (c) openDetail(c.dataset.s); };
 $("list").onclick = openFrom; $("opp").onclick = openFrom; $("sigList").onclick = openFrom; $("bPos").onclick = openFrom;
 $("sigVal").onclick = validate; $("sigClr").onclick = () => { if (confirm("Tüm sinyal kaydı silinsin mi?")) { saveSigs([]); renderSigs(); } };
-$("repoSave").onclick = () => { localStorage.setItem("repo", $("repo").value.trim()); loadModel(); loadBot(); };
+$("repoSave").onclick = () => { localStorage.setItem("repo", $("repo").value.trim()); loadModel(); loadDaily(); loadBot(); };
 try { const ls = JSON.parse(localStorage.getItem("lastScan5")); if (ls && Date.now() - ls.time < 6 * 3600e3) { S.results = ls.results; S.futOk = ls.futOk; $("tf").value = ls.tf; S.tf = ls.tf; $("hdrInfo").textContent = new Date(ls.time).toLocaleTimeString("tr-TR", {hour: "2-digit", minute: "2-digit"}) + " · " + ls.tf + " (kayıtlı)"; render(); } } catch (e) {}
 </script>
 </body>

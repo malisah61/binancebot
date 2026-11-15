@@ -6,6 +6,7 @@ os.environ["BINANCE_DEMO_KEY"] = "k"; os.environ["BINANCE_DEMO_SECRET"] = "s"
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bot"))
 POS = {}; ORD = []; ALGO = {}; INC = []
 PRICE = {"XRPUSDT": 2.0}
+REJECT_STOP = [False]  # başa-baş stop reddi (fiyat girişin gerisinde) senaryosu
 
 
 class H(BaseHTTPRequestHandler):
@@ -37,7 +38,9 @@ class H(BaseHTTPRequestHandler):
                 return self.send(200, {"orderId": len(ORD), "avgPrice": str(PRICE[s]), "executedQty": q["quantity"]})
             return self.send(400, {"code": -4120, "msg": "Order type not supported for this endpoint. Please use the Algo Order API."})
         if p == "/fapi/v1/algoOrder" and m == "POST":
-            i = len(ALGO) + 1; ALGO[i] = q; return self.send(200, {"algoId": i})
+            if REJECT_STOP[0] and q["type"] == "STOP_MARKET":
+                return self.send(400, {"code": -2021, "msg": "Order would immediately trigger."})
+            i = max(ALGO, default=0) + 1; ALGO[i] = q; return self.send(200, {"algoId": i})
         if p == "/fapi/v1/algoOrder" and m == "DELETE":
             ALGO.pop(int(q["algoId"]), None); return self.send(200, {})
         if p == "/fapi/v1/openAlgoOrders": return self.send(200, [{"algoId": k} for k, v in ALGO.items() if v["symbol"] == q["symbol"]])
@@ -78,4 +81,13 @@ executor.sync(D, ds, msgs); assert "XRPUSDT" in ds["positions"] and len(ALGO) ==
 POS["XRPUSDT"] = (0, 0); INC.clear(); INC.append({"kind": "REALIZED_PNL", "income": "-7"}); executor.sync(D, ds, msgs)
 executor.place_limit(D, ds, "XRPUSDT", -1, {"entry": 2.1, "sl": 2.2, "tp1": 2.0, "tp2": 1.9, "expire_t": int(time.time() * 1000) - 1, "until_ms": 10**7, "score": 30}, msgs)
 executor.sync(D, ds, msgs); assert not ds["pending"] and ORD[-1]["status"] == "CANCELED"; print("süresi dolan limit iptal edildi")
+# TP1 sonrası başa-baş stop reddedilirse pozisyon korumasız kalmamalı → kalan kapatılır
+ds["paused"] = False; ALGO.clear(); INC.clear(); POS.clear(); ds["positions"].clear(); ds["pending"].clear()
+executor.open_trade(D, ds, "XRPUSDT", 1, {"entry": 2.0, "sl": 1.9, "tp1": 2.15, "tp2": 2.3, "until": int(time.time() * 1000) + 10**7, "score": 70}, msgs)
+q = ds["positions"]["XRPUSDT"]["qty"]; POS["XRPUSDT"] = (round(q / 2, 6), 2.0); REJECT_STOP[0] = True
+executor.sync(D, ds, msgs)
+assert POS["XRPUSDT"][0] == 0, POS; assert any("başa-baş stop konamadı" in e for e in ds["errors"]), ds["errors"]
+assert ds["positions"]["XRPUSDT"]["sl"] > 2.0
+INC.append({"kind": "REALIZED_PNL", "income": "6"}); executor.sync(D, ds, msgs)
+assert not ds["positions"] and ds["closed"][-1]["reason"] == "TP1→BE", ds["closed"][-1]; print(msgs[-1]); REJECT_STOP[0] = False
 print("DEMO EMİR TESTİ GEÇTİ")

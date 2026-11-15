@@ -362,13 +362,14 @@ def main():
             R = v5.compute(df, tf)
             if btcR is not None:
                 R["btc4"] = mine15.btc_trend(btcR, R["t"].values)
+                R["f_btc"] = v5.btc_align(btcR, R["t"].values)
             sc = score_with(R, w)
             if not np.isfinite(sc[-1]):
                 continue
             d, strength = v5.signals(R, sc, st)
             snap = {k: (round(float(R[k].iloc[-1]), 2) if np.isfinite(R[k].iloc[-1]) else None) for k in LIVE_COMPS}
-            for f in ("f_z", "f_rsi", "f_htf", "f_vwap_atr", "f_rvol", "f_ssl3", "f_bsl3"):
-                val = R[f].iloc[-1]
+            for f in ("f_z", "f_rsi", "f_htf", "f_vwap_atr", "f_rvol", "f_ssl3", "f_bsl3", "f_btc"):
+                val = R[f].iloc[-1] if f in R else np.nan
                 snap[f] = round(float(val), 2) if np.isfinite(val) else None
             lv = None
             if v5.uses_limit(st) and d[-1] != 0:

@@ -22,6 +22,19 @@ for s in range(int(os.environ.get("N", 6))):
     ft = np.arange(start - start % (8 * 3600_000), t[-1], 8 * 3600_000)
     fund = pd.DataFrame({"ts": ft, "funding": rnd.normal(0.0001, 0.0002, len(ft))})
     raw[f"S{s}USDT"] = (k, met, fund)
+# Yeni filtreler: FVG/likidite onayı ve BTC trend yönü (v5.signals)
+import v5
+_R = pd.DataFrame({"t": [1, 2, 3, 4], "f_z": [0.1] * 4, "f_rsi": [50] * 4, "f_htf": [1, -1, 1, -1], "f_vwap_atr": [0.0] * 4,
+                   "smc": [0.5, -0.5, -0.2, 0.3]})
+_sc = np.array([70, 30, 70, 30], float)
+_st = {"type": "trend", "lt": 58, "st": 42, "max_ext": None, "htf": None}
+assert list(v5.signals(_R, _sc, _st)[0]) == [1, -1, 1, -1]
+assert list(v5.signals(_R, _sc, {**_st, "smc": "with"})[0]) == [1, -1, 0, 0]
+assert list(v5.signals(_R, _sc, {**_st, "btc": "with"})[0]) == [0, 0, 0, 0]       # BTC verisi yok → işlem yok
+_R["f_btc"] = v5.btc_align(pd.DataFrame({"t": [1, 2, 3, 4], "trend": [0.5, 0.5, -0.5, np.nan]}), _R["t"].values)
+assert list(v5.signals(_R, _sc, {**_st, "btc": "with"})[0]) == [1, 0, 0, 0]
+assert "BTC trendi" in v5.strategy_name({**_st, "btc": "with", "sl": 1, "tp1": 1.5, "tp2": 2.5})
+print("filtre testleri geçti")
 research.STATE = os.environ.get("OUT") or tempfile.mkdtemp()
 research.telegram.send = lambda chat, txt: print("[TG]\n" + txt[:600])
 research.run(raw, today)

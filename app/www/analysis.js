@@ -222,6 +222,15 @@
     return { leaders: leaders.map(([s, r]) => ({ symbol: s, ret: r })), basketWin, list };
   }
 
-  G.TA = { analyze, laggards, resample, fmt, money, decision, WEIGHTS, GROUP_NAMES };
+  // Strateji ek filtreleri (bot/v5.py signals ile aynı kural): smc "with" = FVG+likidite bileşeni işlem yönünde,
+  // btc "with" = BTC'nin aynı periyottaki trend bileşeni işlem yönünde (BTC verisi yoksa işlem yok)
+  function strategyFilters(st, dir, comps, btcTrend) {
+    if (!dir) return { dir: 0, why: "" };
+    if (st.smc === "with" && !(dir * (comps.smc || 0) > 0)) return { dir: 0, why: " · FVG/likidite bileşeni aynı yönde değil, bekler" };
+    if (st.btc === "with" && !(dir * Math.sign(btcTrend || 0) > 0)) return { dir: 0, why: btcTrend ? " · BTC trendi ters, bekler" : " · BTC trendi belirsiz, bekler" };
+    return { dir, why: "" };
+  }
+
+  G.TA = { analyze, laggards, resample, fmt, money, decision, strategyFilters, WEIGHTS, GROUP_NAMES };
   if (typeof module !== "undefined") module.exports = G.TA;
 })(typeof window !== "undefined" ? window : globalThis);

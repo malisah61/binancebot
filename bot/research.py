@@ -240,6 +240,19 @@ def strategy_grid():
                     for h in (None, "with"):
                         g.append({"type": "pullback", "lt": lt, "st": 100 - lt, "max_pos": mp, **entry, "expire": 6, "stop_lb": 12,
                                   "buf": 0.3, "max_risk": 3.0, "tp1": tp1, "tp2": tp2, "htf": h, "max_new": 3})
+    # Gece masası hipotezleri (16.11.2026, canlı veriden): H1 FVG/likidite onayı (canlıda aynı yöndeyken %52 / değilken %29 kazanma),
+    # H2 BTC trend filtresi (canlıda long'lar düşen piyasada %15 kazandı; BTC ile aynı yönde olmayan işlemleri ele)
+    for sl, t1, t2 in EXITS:
+        ex = {"sl": sl, "tp1": t1, "tp2": t2, "max_new": 3}
+        for lt in (58, 66):
+            for h in (None, "with"):
+                for flt in ({"smc": "with"}, {"btc": "with"}, {"smc": "with", "btc": "with"}):
+                    g.append({"type": "trend", "lt": lt, "st": 100 - lt, "max_ext": None, "htf": h, **flt, **ex})
+    for lt in (58, 66):
+        for mp in (0.5, 0.7):
+            for entry in ({"entry": "fib", "fib": 0.5}, {"entry": "atr", "k": 1.0}):
+                g.append({"type": "pullback", "lt": lt, "st": 100 - lt, "max_pos": mp, **entry, "expire": 6, "stop_lb": 12,
+                          "buf": 0.3, "max_risk": 3.0, "tp1": 1.5, "tp2": 3.0, "htf": "with", "btc": "with", "max_new": 3})
     return g
 
 
@@ -398,6 +411,10 @@ def run(raw, today, t0=None):
             b["sym"] = s
             bars.append(b)
         bars = pd.concat(bars)
+        if "BTCUSDT" in coins:  # BTC trend filtresi için her coine BTC'nin aynı mumdaki trend yönü
+            btcR = coins["BTCUSDT"][1]
+            for sym, (df, R, fm) in coins.items():
+                R["f_btc"] = v5.btc_align(btcR, R["t"].values)
         tr_bars, te_bars = bars[bars["t"] < split_t], bars[bars["t"] >= split_t]
         out = {"bars": int(len(bars)), "baseline": {}, "baseline_test": {}}
 

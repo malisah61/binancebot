@@ -173,6 +173,7 @@ function dailyCard(sym) {
     <div class="mut sm" style="margin-top:6px">Son 180 günün hacim profili ve kapanmış günlük mumlar; her gün 03:09'da güncellenir. "Alıcı bölgesi": agresif alımların en yoğun olduğu, fiyatın altındaki seviye.</div></div>`;
 }
 
+function btcTrend() { if (S.btcT !== undefined && S.btcTf === S.tf) return S.btcT; const b = (S.results || []).find((x) => x.symbol === "BTCUSDT"); return b && b.comps ? Math.sign(b.comps.trend || 0) : 0; }
 function btcDir() { const k = S.series && S.series.BTCUSDT; return k && k.length > 5 ? Math.sign(k[k.length - 1].c - k[k.length - 5].c) : 0; }
 // Botun araştırmada doğrulanmış stratejisi: bu coinde şimdi işlem açar mıydı?
 const LIVE_W = {trend: 20, momentum: 18, volume: 10, smc: 10, vwap: 5};
@@ -213,6 +214,7 @@ function botSignal(m, comps, tf) {
   else { dir = ssl1 ? 1 : bsl1 ? -1 : 0; strength = Math.abs(m.ext); why = dir ? (dir > 0 ? "bu mumda SSL likidite avı" : "bu mumda BSL likidite avı") : "bu mumda likidite avı yok"; }
   if (dir && st.htf === "with" && !(dir * Math.sign(m.htf || 0) > 0)) { why += " · üst trend ters, bekler"; dir = 0; }
   if (dir && st.htf === "against" && !(dir * Math.sign(m.htf || 0) < 0)) { why += " · üst trend aynı yönde, bekler"; dir = 0; }
+  { const f = TA.strategyFilters(st, dir, comps, m.btcT); if (dir && !f.dir) { why += f.why; dir = 0; } }
   if (!dir) limit = null;
   return {dir, why, strength, B, limit};
 }
@@ -237,6 +239,7 @@ async function scan() {
           if (k.length >= 120) {
             const a = TA.analyze(k, {htfMs: TFMS[tf] * 4, tfMs: TFMS[tf], oi, gls, funding: perp ? S.perps[s] : null, ...modelOpt(tf)});
             series[s] = k; const m = a.metrics;
+            if (s === "BTCUSDT") { const bt = TA.analyze(k, {htfMs: TFMS[tf] * 4, tfMs: TFMS[tf]}).components.find((c) => c.key === "trend"); S.btcT = bt ? Math.sign(bt.score || 0) : 0; S.btcTf = tf; }
             res.push({symbol: s, perp, qv24: vol[s], price: a.price, score: a.score, decision: a.decision, change: a.change, agreement: a.agreement, plan: a.plan,
               m: {rsi: m.rsi, rvol: m.rvol, taker: m.taker, z: m.z, funding: m.funding, oiChg: m.oiChg, regime: m.regime, gls: m.gls, sweeps: m.sweeps.map((x) => x.type), sw: m.sweeps.map((x) => ({type: x.type, ago: x.ago})), htf: m.htf, ext: (a.price - m.vwap) / (m.atr || 1),
                  pos: m.pos, fromLo: m.fromLo, fromHi: m.fromHi, lo48: m.lo48, hi48: m.hi48, lo12: m.lo12, hi12: m.hi12, atr: m.atr, price: a.price, t: m.t},
@@ -263,7 +266,7 @@ function render() {
   else if (f === "rvol") r = r.filter((a) => a.m.rvol > 1.8).sort((a, b) => b.m.rvol - a.m.rvol);
   else if (f === "sweep") r = r.filter((a) => a.m.sweeps.length);
   else if (f === "squeeze") r = r.filter((a) => a.m.regime === "Short Squeeze" || (a.m.funding < -0.01));
-  else if (f === "bot") r = r.map((a) => ({a, s: botSignal({...a.m, btc: btcDir()}, a.comps, S.tf)})).filter((x) => x.s.dir).sort((x, y) => y.s.strength - x.s.strength).map((x) => x.a);
+  else if (f === "bot") r = r.map((a) => ({a, s: botSignal({...a.m, btc: btcDir(), btcT: btcTrend()}, a.comps, S.tf)})).filter((x) => x.s.dir).sort((x, y) => y.s.strength - x.s.strength).map((x) => x.a);
   else r = r.sort((a, b) => b.score - a.score);
   if (!S.results.length) return;
   if (!r.length) { $("list").innerHTML = '<div class="warn">Bu filtreye uyan coin yok.</div>'; return; }
@@ -319,14 +322,15 @@ async function loadDetail(sym, seq) {
     perp ? safe(ratio("topLongShortPositionRatio", sym, tf)) : null, safe(perp ? fut(`/fapi/v1/depth?symbol=${sym}&limit=500`) : spot(`/api/v3/depth?symbol=${sym}&limit=500`)),
     safe(perp ? fut(`/fapi/v1/aggTrades?symbol=${sym}&limit=1000`) : spot(`/api/v3/aggTrades?symbol=${sym}&limit=1000`))]);
   if (seq !== S.seq) return; // bu arada başka coin açıldı
-  let btc = 0; try { const bk = await Promise.race([klines("BTCUSDT", tf, "BTCUSDT" in S.perps, 6), sleep(4000).then(() => null)]); if (bk && bk.length > 4) btc = Math.sign(bk[bk.length - 1].c - bk[bk.length - 5].c); } catch (e) {}
+  let btc = 0, btcT = 0; try { const bk = await Promise.race([klines("BTCUSDT", tf, "BTCUSDT" in S.perps, 500), sleep(5000).then(() => null)]); if (bk && bk.length > 4) btc = Math.sign(bk[bk.length - 1].c - bk[bk.length - 5].c);
+    if (bk && bk.length >= 120) { const ba = TA.analyze(bk, {htfMs: TFMS[tf] * 4, tfMs: TFMS[tf]}); const bt = ba.components.find((c) => c.key === "trend"); btcT = bt ? Math.sign(bt.score || 0) : 0; } } catch (e) {}
   if (seq !== S.seq) return;
   const bk = book ? {bids: book.bids.map((x) => [+x[0], +x[1]]), asks: book.asks.map((x) => [+x[0], +x[1]])} : null;
   const trades = tr ? tr.map((x) => ({p: +x.p, q: +x.q, m: x.m, T: x.T})) : null;
   const a = TA.analyze(k, {htfMs: TFMS[tf] * 4, tfMs: TFMS[tf], oi, gls, tls, funding: perp ? S.perps[sym] : null, book: bk, trades, ...modelOpt(tf)});
   { const B = botStrategy(tf); const st = B.st, A = a.metrics.atr, d = a.plan.dir, e = a.price; const m = B.adopted && st.type !== "pullback" && st.limit == null && st.sl ? [st.sl, st.tp1, st.tp2] : [1.5, 1.5, 3];
     a.plan = {...a.plan, sl: e - d * m[0] * A, tp1: e + d * m[1] * A, tp2: e + d * m[2] * A, m}; }
-  a.symbol = sym; a.tf = tf; a.perp = perp; a.btc = btc; a.live = S.det && S.det.symbol === sym ? S.det.live : null;
+  a.symbol = sym; a.tf = tf; a.perp = perp; a.btc = btc; a.btcT = btcT; a.live = S.det && S.det.symbol === sym ? S.det.live : null;
   S.det = a; recordSignal(a, sym, tf, perp); renderDetail();
 }
 function startLive(sym, seq) {
@@ -431,7 +435,7 @@ function features(a) {
 function botCard(a) {
   const m = a.metrics; const comps = Object.fromEntries(a.components.map((c) => [c.key, c.score]));
   const sg = botSignal({z: m.z, rsi: m.rsi, htf: m.htf, ext: (a.price - m.vwap) / (m.atr || 1), sw: m.sweeps, pos: m.pos, fromLo: m.fromLo, fromHi: m.fromHi,
-    lo48: m.lo48, hi48: m.hi48, lo12: m.lo12, hi12: m.hi12, atr: m.atr, price: a.price, rvol: m.rvol, taker: m.taker, t: m.t, btc: a.btc}, comps, a.tf); const B = sg.B; const t = B.test && B.test["5"]; const L = sg.limit;
+    lo48: m.lo48, hi48: m.hi48, lo12: m.lo12, hi12: m.hi12, atr: m.atr, price: a.price, rvol: m.rvol, taker: m.taker, t: m.t, btc: a.btc, btcT: a.btcT}, comps, a.tf); const B = sg.B; const t = B.test && B.test["5"]; const L = sg.limit;
   return `<div class="card"><h3>🤖 Botun stratejisi (${a.tf})</h3><div><b>${B.name}</b></div>
     <div class="mut sm" style="margin-top:3px">${B.adopted ? `✅ Geçmiş veride, modelin görmediği dönemde doğrulandı${t ? `: ${t.n} işlem, kazanma %${t.win}, ort. R ${t.avg_R}, kâr faktörü ${t.pf}` : ""}` : B.mode === "ileri test" ? `🧪 İleri test: görülmemiş dönemde mevcut kuraldan iyi ama komisyon sonrası henüz kârlı değil${t ? ` (${t.n} işlem, ort. R ${t.avg_R}, kâr faktörü ${t.pf})` : ""}. Sadece kâğıt hesapta deneniyor, demo emri verilmez.` : "⚠️ Henüz doğrulanmış bir strateji yok; varsayılan kural kullanılıyor"}</div>
     <div class="row between" style="margin-top:8px"><span>Bu coinde şimdi:</span>${sg.dir > 0 ? `<span class="badge b-sl">${L ? "LİMİT ALIŞ BEKLER" : "LONG AÇAR"}</span>` : sg.dir < 0 ? `<span class="badge b-ss">${L ? "LİMİT SATIŞ BEKLER" : "SHORT AÇAR"}</span>` : '<span class="badge b-n">İŞLEM YOK</span>'}</div>

@@ -356,8 +356,19 @@ def sync(D, ds, msgs, close_all=False):
             if "sl" in p["orders"]:
                 D.cancel(sym, p["orders"]["sl"])
             be = p["entry"] * (1 + 0.0008 * p["dir"])  # komisyonu karşılayacak kadar üstü
-            p["orders"]["sl"] = D.cond(sym, close_side, "STOP_MARKET", be, close=True)
-            msgs.append(f"🧪 DEMO {sym.replace('USDT', '')}: TP1 alındı, stop girişe çekildi")
+            p["sl"] = be
+            try:
+                p["orders"]["sl"] = D.cond(sym, close_side, "STOP_MARKET", be, close=True)
+                msgs.append(f"🧪 DEMO {sym.replace('USDT', '')}: TP1 alındı, stop girişe çekildi")
+            except BinanceError as e:
+                # Fiyat girişin gerisine dönmüşse borsa stop'u reddeder (ör. -2021 "hemen tetiklenir"). Eski stop iptal
+                # edildiği için pozisyon korumasız kalmasın: kalan miktarı piyasa emriyle kapat (≈ giriş seviyesi).
+                p["orders"].pop("sl", None)
+                ds["errors"].append(f"{sym} başa-baş stop konamadı: {e} → kalan pozisyon kapatıldı")
+                D.cancel_all(sym)
+                D.req("POST", "/fapi/v1/order", {"symbol": sym, "side": close_side, "type": "MARKET", "quantity": abs(amt), "reduceOnly": "true"})
+                p["reason"] = "TP1→BE"
+                msgs.append(f"🧪⚠️ DEMO {sym.replace('USDT', '')}: TP1 alındı ama başa-baş stop konamadı ({e.msg}); kalan pozisyon güvenlik için kapatıldı")
     eq, _ = D.balance()
     ds["equity"] = round(eq, 2)
     ds["curve"].append([now, round(eq, 2)])

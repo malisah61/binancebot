@@ -271,8 +271,27 @@ def signals(R, score, st):
         d = np.where(d * np.sign(htf) > 0, d, 0)
     elif st.get("htf") == "against":
         d = np.where(d * np.sign(htf) < 0, d, 0)
+    if st.get("smc") == "with":  # FVG + likidite avı bileşeni işlem yönünde olmalı
+        smc = np.nan_to_num(R["smc"].values.astype(float))
+        d = np.where(d * smc > 0, d, 0)
+    if st.get("btc") == "with":  # BTC'nin aynı periyottaki trend bileşeni işlem yönünde olmalı (veri yoksa işlem yok)
+        b = np.nan_to_num(R["f_btc"].values.astype(float)) if "f_btc" in R else np.zeros(len(d))
+        d = np.where(d * np.sign(b) > 0, d, 0)
     d = np.where(valid & np.isfinite(z), d, 0)
     return d.astype(int), strength
+
+
+def btc_align(R_btc, t):
+    """BTC'nin trend bileşeninin işareti (+1 yükseliş / -1 düşüş / 0), verilen mum zamanlarına hizalı.
+    Aynı mumun kapanışıyla hesaplanır; coinin kendi sinyaliyle aynı anda bilinir (geleceğe bakmaz)."""
+    s = pd.Series(np.sign(np.nan_to_num(R_btc["trend"].values.astype(float))), index=R_btc["t"].values)
+    s = s[~s.index.duplicated(keep="last")]
+    return s.reindex(t).fillna(0).values
+
+
+def _filters_text(st):
+    return ("" + (" +FVG/likidite aynı yönde" if st.get("smc") == "with" else "")
+            + (" +BTC trendi aynı yönde" if st.get("btc") == "with" else ""))
 
 
 def pullback_levels(R, d, st):
@@ -324,7 +343,7 @@ def uses_limit(st):
 def strategy_name(st):
     t = st.get("type")
     ex = f"SL{st.get('sl')}/TP{st.get('tp1')}-{st.get('tp2')}"
-    h = {"with": " +üst trend yönünde", "against": " +üst trende karşı"}.get(st.get("htf"), "")
+    h = {"with": " +üst trend yönünde", "against": " +üst trende karşı"}.get(st.get("htf"), "") + _filters_text(st)
     if t == "trend":
         e = f", VWAP'tan ≤{st['max_ext']} ATR" if st.get("max_ext") is not None else ""
         return f"Trend takibi (skor ≥{st['lt']} / ≤{round(st['st'])}{e}){h}, {ex}"

@@ -1,5 +1,5 @@
 {
- "time": 1794729910871,
+ "time": 1794730420250,
  "tfs": {
   "15m": {
    "weights": {
@@ -12,9 +12,9 @@
    "long_th": 74,
    "short_th": 26,
    "learned": true,
-   "test_avg_R": 0.012,
-   "test_win": 49.1,
-   "baseline_test_avg_R": -0.003,
+   "test_avg_R": 0.013,
+   "test_win": 49.0,
+   "baseline_test_avg_R": 0.01,
    "live_weights": {
     "trend": 20,
     "momentum": 18,
@@ -38,29 +38,29 @@
    "strategy_mode": "varsayılan",
    "strategy_test": {
     "5": {
-     "n": 2932,
-     "win": 47.6,
-     "avg_roe": -0.65,
-     "med_roe": -1.43,
-     "pf": 0.79,
-     "avg_R": -0.026,
-     "net_100": -1912.0,
+     "n": 2991,
+     "win": 47.7,
+     "avg_roe": -0.6,
+     "med_roe": -1.41,
+     "pf": 0.81,
+     "avg_R": -0.021,
+     "net_100": -1797.0,
      "max_dd_100": 2234.0,
      "liq": 0,
-     "avg_bars": 9.2,
+     "avg_bars": 9.3,
      "reasons": {
-      "TP1→BE": 681,
-      "SL": 1507,
-      "TP2": 727,
-      "SÜRE": 17
+      "TP1→BE": 690,
+      "SL": 1533,
+      "TP2": 754,
+      "SÜRE": 14
      },
      "long": {
-      "n": 1165,
-      "win": 45.6
+      "n": 1177,
+      "win": 45.5
      },
      "short": {
-      "n": 1767,
-      "win": 48.9
+      "n": 1814,
+      "win": 49.2
      }
     }
    }
@@ -78,9 +78,9 @@
    "long_th": 58,
    "short_th": 42.99,
    "learned": false,
-   "test_avg_R": -0.069,
-   "test_win": 46.0,
-   "baseline_test_avg_R": -0.042,
+   "test_avg_R": -0.049,
+   "test_win": 46.6,
+   "baseline_test_avg_R": -0.02,
    "live_weights": {
     "trend": 20,
     "momentum": 18,
@@ -104,29 +104,29 @@
    "strategy_mode": "varsayılan",
    "strategy_test": {
     "5": {
-     "n": 1437,
-     "win": 50.0,
-     "avg_roe": -0.4,
-     "med_roe": 0.01,
-     "pf": 0.9,
-     "avg_R": 0.008,
-     "net_100": -578.0,
+     "n": 1469,
+     "win": 50.2,
+     "avg_roe": -0.34,
+     "med_roe": 0.06,
+     "pf": 0.92,
+     "avg_R": 0.015,
+     "net_100": -501.0,
      "max_dd_100": 1058.0,
      "liq": 0,
-     "avg_bars": 9.9,
+     "avg_bars": 9.8,
      "reasons": {
-      "TP1→BE": 355,
-      "SL": 711,
-      "TP2": 360,
-      "SÜRE": 11
+      "TP1→BE": 363,
+      "SL": 721,
+      "TP2": 375,
+      "SÜRE": 10
      },
      "long": {
-      "n": 512,
-      "win": 46.1
+      "n": 518,
+      "win": 45.9
      },
      "short": {
-      "n": 925,
-      "win": 52.2
+      "n": 951,
+      "win": 52.6
      }
     }
    }
@@ -144,9 +144,9 @@
    "long_th": 58,
    "short_th": 42.99,
    "learned": false,
-   "test_avg_R": -0.017,
-   "test_win": 49.0,
-   "baseline_test_avg_R": -0.005,
+   "test_avg_R": 0.019,
+   "test_win": 49.9,
+   "baseline_test_avg_R": 0.024,
    "live_weights": {
     "trend": 20,
     "momentum": 18,
@@ -170,29 +170,29 @@
    "strategy_mode": "varsayılan",
    "strategy_test": {
     "5": {
-     "n": 735,
-     "win": 51.3,
-     "avg_roe": 0.06,
-     "med_roe": 1.23,
-     "pf": 1.01,
-     "avg_R": 0.051,
-     "net_100": 46.0,
+     "n": 752,
+     "win": 52.1,
+     "avg_roe": 0.35,
+     "med_roe": 1.66,
+     "pf": 1.06,
+     "avg_R": 0.076,
+     "net_100": 264.0,
      "max_dd_100": 779.0,
      "liq": 0,
-     "avg_bars": 10.0,
+     "avg_bars": 9.9,
      "reasons": {
-      "TP1→BE": 167,
-      "SL": 353,
-      "TP2": 201,
-      "SÜRE": 14
+      "TP1→BE": 169,
+      "SL": 356,
+      "TP2": 217,
+      "SÜRE": 10
      },
      "long": {
-      "n": 227,
-      "win": 44.9
+      "n": 228,
+      "win": 45.2
      },
      "short": {
-      "n": 508,
-      "win": 54.1
+      "n": 524,
+      "win": 55.2
      }
     }
    }
@@ -210,9 +210,9 @@
    "long_th": 58,
    "short_th": 42.99,
    "learned": false,
-   "test_avg_R": 0.041,
-   "test_win": 51.9,
-   "baseline_test_avg_R": 0.07,
+   "test_avg_R": 0.086,
+   "test_win": 53.0,
+   "baseline_test_avg_R": 0.115,
    "live_weights": {
     "trend": 20,
     "momentum": 18,
@@ -232,51 +232,49 @@
     "max_new": 3
    },
    "strategy_name": "Trend takibi (skor ≥58 / ≤42) +üst trend yönünde, SL1.0/TP1.5-2.5",
-   "strategy_adopted": false,
-   "strategy_mode": "ileri test",
+   "strategy_adopted": true,
+   "strategy_mode": "doğrulandı",
    "strategy_test": {
     "5": {
-     "n": 217,
-     "win": 43.3,
-     "avg_roe": 0.02,
-     "med_roe": -7.94,
-     "pf": 1.0,
-     "avg_R": 0.093,
-     "net_100": 5.0,
-     "max_dd_100": 676.0,
+     "n": 222,
+     "win": 45.0,
+     "avg_roe": 0.95,
+     "med_roe": -6.93,
+     "pf": 1.11,
+     "avg_R": 0.16,
+     "net_100": 211.0,
+     "max_dd_100": 696.0,
      "liq": 0,
      "avg_bars": 6.8,
      "reasons": {
       "TP1→BE": 34,
-      "SL": 121,
-      "TP2": 57,
-      "SÜRE": 5
+      "SL": 122,
+      "TP2": 66
      },
      "long": {
       "n": 50,
       "win": 20.0
      },
      "short": {
-      "n": 167,
-      "win": 50.3
+      "n": 172,
+      "win": 52.3
      }
     },
     "10": {
-     "n": 217,
-     "win": 43.3,
-     "avg_roe": 0.19,
-     "med_roe": -15.88,
-     "pf": 1.01,
-     "avg_R": 0.095,
-     "net_100": 42.0,
-     "max_dd_100": 1319.0,
+     "n": 222,
+     "win": 45.0,
+     "avg_roe": 2.05,
+     "med_roe": -13.86,
+     "pf": 1.12,
+     "avg_R": 0.161,
+     "net_100": 454.0,
+     "max_dd_100": 1360.0,
      "liq": 2,
      "avg_bars": 6.8,
      "reasons": {
       "TP1→BE": 34,
-      "SL": 119,
-      "TP2": 57,
-      "SÜRE": 5,
+      "SL": 120,
+      "TP2": 66,
       "LİKİDASYON": 2
      },
      "long": {
@@ -284,8 +282,8 @@
       "win": 20.0
      },
      "short": {
-      "n": 167,
-      "win": 50.3
+      "n": 172,
+      "win": 52.3
      }
     }
    }

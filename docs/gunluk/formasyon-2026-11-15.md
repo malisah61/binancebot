@@ -7,25 +7,25 @@ Taban (rastgele gün, 7 gün sonra): eğitim %0.79, test %0.02
 
 | Formasyon | Yön | Eğitim n / 7g isabet / ort R (rastgele) | TEST n / 7g isabet / ort R (rastgele) / PF | Karar |
 |---|---|---|---|---|
-| Ters omuz-baş-omuz | ↑ | 41 / %63.4 / 0.338 (-0.157) | 11 / %81.8 / 0.304 (-0.105) / 1.99 | az örnek |
-| Gerçek aşağı kırılım | ↓ | 651 / %43.8 / -0.13 (0.066) | 357 / %55.2 / 0.281 (0.094) / 1.59 | zayıf/karışık |
-| Boğa tuzağı (sahte yukarı kırılım) | ↓ | 280 / %56.1 / -0.04 (0.064) | 94 / %59.6 / 0.207 (-0.029) / 1.44 | zayıf/karışık |
-| Akşam yıldızı | ↓ | 34 / %55.9 / 0.07 (0.003) | 22 / %45.5 / 0.134 (-0.022) / 1.25 | zayıf/karışık |
-| Yükseliş yutan mum | ↑ | 265 / %44.2 / -0.223 (-0.063) | 217 / %41.0 / 0.091 (-0.097) / 1.15 | zayıf/karışık |
-| Trend dönüşü (düşüş yapısı kırıldı) | ↑ | 334 / %42.5 / -0.028 (-0.08) | 131 / %43.5 / 0.04 (-0.058) / 1.12 | zayıf/karışık |
-| İkili dip | ↑ | 97 / %43.3 / 0.001 (-0.039) | 33 / %51.5 / -0.012 (0.079) / 0.96 | zayıf/karışık |
-| Düşüş yutan mum | ↓ | 247 / %57.9 / -0.085 (0.035) | 85 / %48.2 / -0.039 (0.04) / 0.94 | işe yaramıyor |
-| İkili tepe | ↓ | 99 / %60.6 / 0.164 (-0.032) | 30 / %63.3 / -0.04 (0.171) / 0.88 | zayıf/karışık |
-| Trend dönüşü (yükseliş yapısı kırıldı) | ↓ | 382 / %48.2 / -0.042 (0.02) | 149 / %49.0 / -0.064 (0.056) / 0.84 | işe yaramıyor |
-| Gerçek yukarı kırılım | ↑ | 792 / %47.7 / 0.052 (0.009) | 290 / %45.2 / -0.074 (-0.009) / 0.88 | zayıf/karışık |
-| Ayı tuzağı (sahte aşağı kırılım) | ↑ | 270 / %49.3 / -0.08 (-0.134) | 161 / %39.8 / -0.091 (-0.01) / 0.84 | zayıf/karışık |
-| Kayan yıldız | ↓ | 251 / %53.4 / -0.177 (-0.003) | 95 / %57.9 / -0.117 (-0.132) / 0.82 | zayıf/karışık |
-| Omuz-baş-omuz | ↓ | 55 / %58.2 / 0.071 (0.093) | 31 / %51.6 / -0.228 (-0.068) / 0.64 | işe yaramıyor |
-| Çekiç | ↑ | 235 / %48.1 / -0.045 (-0.058) | 95 / %29.5 / -0.347 (-0.043) / 0.53 | zayıf/karışık |
-| Sabah yıldızı | ↑ | 38 / %44.7 / -0.283 (-0.087) | 17 / %17.6 / -0.483 (-0.013) / 0.42 | az örnek |
+| Ters omuz-baş-omuz | ↑ | 41 / %63.4 / 0.338 (-0.103) | 11 / %81.8 / 0.304 (-0.105) / 1.99 | az örnek |
+| Gerçek aşağı kırılım | ↓ | 651 / %43.8 / -0.13 (0.071) | 357 / %55.2 / 0.281 (0.114) / 1.59 | zayıf/karışık |
+| Boğa tuzağı (sahte yukarı kırılım) | ↓ | 280 / %56.1 / -0.04 (0.048) | 94 / %59.6 / 0.207 (-0.029) / 1.44 | zayıf/karışık |
+| Akşam yıldızı | ↓ | 34 / %55.9 / 0.07 (-0.026) | 22 / %45.5 / 0.134 (-0.022) / 1.25 | zayıf/karışık |
+| Yükseliş yutan mum | ↑ | 265 / %44.2 / -0.223 (-0.062) | 217 / %41.0 / 0.091 (-0.109) / 1.15 | zayıf/karışık |
+| Trend dönüşü (düşüş yapısı kırıldı) | ↑ | 334 / %42.5 / -0.028 (-0.083) | 131 / %43.5 / 0.04 (-0.073) / 1.12 | zayıf/karışık |
+| İkili dip | ↑ | 97 / %43.3 / 0.001 (-0.031) | 33 / %51.5 / -0.012 (0.095) / 0.96 | zayıf/karışık |
+| Düşüş yutan mum | ↓ | 247 / %57.9 / -0.085 (0.034) | 85 / %48.2 / -0.039 (0.056) / 0.94 | işe yaramıyor |
+| İkili tepe | ↓ | 99 / %60.6 / 0.164 (-0.027) | 30 / %63.3 / -0.04 (0.156) / 0.88 | zayıf/karışık |
+| Trend dönüşü (yükseliş yapısı kırıldı) | ↓ | 382 / %48.2 / -0.042 (0.011) | 149 / %49.0 / -0.064 (0.052) / 0.84 | işe yaramıyor |
+| Gerçek yukarı kırılım | ↑ | 792 / %47.7 / 0.052 (-0.001) | 290 / %45.2 / -0.074 (0.005) / 0.88 | zayıf/karışık |
+| Ayı tuzağı (sahte aşağı kırılım) | ↑ | 270 / %49.3 / -0.08 (-0.16) | 161 / %39.8 / -0.091 (-0.019) / 0.84 | zayıf/karışık |
+| Kayan yıldız | ↓ | 251 / %53.4 / -0.177 (-0.006) | 95 / %57.9 / -0.117 (-0.126) / 0.82 | zayıf/karışık |
+| Omuz-baş-omuz | ↓ | 55 / %58.2 / 0.071 (0.088) | 31 / %51.6 / -0.228 (-0.056) / 0.64 | işe yaramıyor |
+| Çekiç | ↑ | 235 / %48.1 / -0.045 (-0.051) | 95 / %29.5 / -0.347 (-0.054) / 0.53 | zayıf/karışık |
+| Sabah yıldızı | ↑ | 38 / %44.7 / -0.283 (-0.129) | 17 / %17.6 / -0.483 (-0.071) / 0.42 | az örnek |
 
 İsabet: 7 gün sonra fiyat beklenen yönde mi. Ort R: formasyonun kendi stop/hedefiyle işlemin ortalama sonucu (komisyon dahil; R = risk birimi).
-Parantez: aynı stop/hedef mesafesiyle RASTGELE bir günde girseydin. Formasyonun gerçek katkısı = ort R − rastgele. 'Güvenilir' için hem eğitimde hem testte bu fark > 0,1R olmalı.
+Parantez: aynı stop/hedef mesafesiyle RASTGELE bir günde girseydin. Formasyonun gerçek katkısı = ort R − rastgele. 'Güvenilir' için bu fark hem eğitimde hem testte > 0,1R ve istatistiksel olarak anlamlı olmalı (şans eseri olma ihtimali düşük).
 
 ## Bugünün tablosu (ilk 40 coin)
 

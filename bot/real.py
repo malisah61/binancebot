@@ -130,12 +130,19 @@ def main():
         ds["close_all_done"] = ctl["close_all_t"]
         ds["paused"] = True
         msgs.append("⏹ Tüm gerçek pozisyonlar ve bekleyen emirler kapatıldı; bot duraklatıldı.")
+    eq, last = ds.get("equity", 0), ds.get("eq_reported")
+    if ctl.get("rapor_t", 0) > ds.get("rapor_done", 0) or last is None or abs(eq - last) > max(1.0, 0.1 * last):
+        ds["eq_reported"], ds["rapor_done"] = eq, ctl.get("rapor_t", 0)
+        min_need = 5 / (LIMITS["margin_frac"] * LIMITS["lev"]) * 1.1
+        msgs.append(f"💰 Gerçek Futures bakiyesi: {eq:.2f} USDT · açık {len(ds['positions'])} · bekleyen {len(ds['pending'])}"
+                    f"{' · ⏸ duraklatıldı' if ds['paused'] else ''}"
+                    + (f"\n⚠️ Binance'in en küçük emir tutarı (~5 $) nedeniyle bot en az ~{min_need:.0f} USDT ile işlem açabilir." if eq < min_need else ""))
     rep = json.load(open(os.path.join(ROOT, "state", "extreme.json")))
     picks = {ev: p for ev, p in rep.get("picks", {}).items() if p.get("adopted")}
     rank = rep.get("rank_hist") or {}
     if not rank:
         msgs.append("ℹ️ extreme.json'da katman bilgisi yok, bu tur atlandı.")
-    elif picks and not ds["paused"] and not ds.get("halted") and ds.get("equity", 0) > 5:
+    elif picks and not ds["paused"] and not ds.get("halted") and ds.get("equity", 0) >= 5 / (LIMITS["margin_frac"] * LIMITS["lev"]):
         cands, regime = candidates(R, picks, rank, ds["done"])
         for c in cands:
             try:

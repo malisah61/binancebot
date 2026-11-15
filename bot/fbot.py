@@ -265,7 +265,8 @@ def handle_commands(state, px, latest):
                 ctl["paused"] = False
                 telegram.send(chat, "▶️ GERÇEK hesap: işlem açma devam edecek (en geç ~10 dk).")
             else:
-                telegram.send(chat, "Komutlar: /gercekdur · /gercekdevam · /gercekkapat (hepsini kapat)")
+                ctl["rapor_t"] = now_ms()
+                telegram.send(chat, "💰 Gerçek hesap durumu sunucudan isteniyor (~10 dk içinde gelir). Komutlar: /gercekdur · /gercekdevam · /gercekkapat")
             json.dump(ctl, open(path, "w"))
             continue
         if txt.startswith(("/durum", "/start")):

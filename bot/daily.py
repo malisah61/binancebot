@@ -115,9 +115,12 @@ def study(data):
                         "pf": round(float(rr[rr > 0].sum() / -rr[rr < 0].sum()), 2) if (rr < 0).any() else None,
                         "rand_R": round(float(x["R_rand"].mean()), 3) if x["R_rand"].notna().any() else None}
             st[part]["edge_R"] = round(st[part]["avg_R"] - st[part]["rand_R"], 3) if st[part]["avg_R"] is not None and st[part]["rand_R"] is not None else None
+            dd = (x["R"] - x["R_rand"]).dropna()
+            st[part]["t"] = round(float(dd.mean() / (dd.std(ddof=1) / np.sqrt(len(dd)))), 2) if len(dd) > 5 and dd.std(ddof=1) > 0 else None
         tr, te = st["train"], st["test"]
-        ok = lambda p: p["n"] >= 20 and (p["avg_R"] or -9) > 0.1 and (p["edge_R"] or -9) > 0.1 and (p["edge7"] or -9) > 0
-        st["verdict"] = ("güvenilir" if ok(tr) and ok(te) else
+        # güvenilir: rastgele girişe göre fark istatistiksel olarak anlamlı (eğitimde t ≥ 2, testte t ≥ 1,5) ve ≥ 0,1R
+        ok = lambda p, tmin: p["n"] >= 20 and (p["avg_R"] or -9) > 0.1 and (p["edge_R"] or -9) > 0.1 and (p["edge7"] or -9) > 0 and (p["t"] or 0) >= tmin
+        st["verdict"] = ("güvenilir" if ok(tr, 2.0) and ok(te, 1.5) else
                          "az örnek" if tr["n"] < 20 or te["n"] < 20 else
                          "zayıf/karışık" if ((tr["edge_R"] or -9) > 0) != ((te["edge_R"] or -9) > 0) else
                          "işe yaramıyor" if (te["edge_R"] or -9) <= 0 else "zayıf/karışık")
@@ -168,7 +171,7 @@ def report(stats, sc, today):
         tr, te = s["train"], s["test"]
         L.append(f"| {s['name']} | {'↑' if s['dir'] > 0 else '↓'} | {tr['n']} / %{tr['hit7']} / {tr['avg_R']} ({tr['rand_R']}) | {te['n']} / %{te['hit7']} / {te['avg_R']} ({te['rand_R']}) / {te['pf']} | {s['verdict']} |")
     L += ["", "İsabet: 7 gün sonra fiyat beklenen yönde mi. Ort R: formasyonun kendi stop/hedefiyle işlemin ortalama sonucu (komisyon dahil; R = risk birimi).",
-          "Parantez: aynı stop/hedef mesafesiyle RASTGELE bir günde girseydin. Formasyonun gerçek katkısı = ort R − rastgele. 'Güvenilir' için hem eğitimde hem testte bu fark > 0,1R olmalı.", "",
+          "Parantez: aynı stop/hedef mesafesiyle RASTGELE bir günde girseydin. Formasyonun gerçek katkısı = ort R − rastgele. 'Güvenilir' için bu fark hem eğitimde hem testte > 0,1R ve istatistiksel olarak anlamlı olmalı (şans eseri olma ihtimali düşük).", "",
           "## Bugünün tablosu (ilk 40 coin)", ""]
     act = [x for x in sc if x["events"]]
     for x in sorted(act, key=lambda x: min(e["days_ago"] for e in x["events"])):

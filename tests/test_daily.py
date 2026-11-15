@@ -21,7 +21,8 @@ def series(seed, n=1100):
     h = np.maximum(o, c) * (1 + np.abs(rnd.normal(0, 0.015, n))); l = np.minimum(o, c) * (1 - np.abs(rnd.normal(0, 0.015, n)))
     v = np.abs(rnd.normal(1e6, 2e5, n)); t = (int(time.time() * 1000) // 86400000 - n) * 86400000 + np.arange(n) * 86400000
     return pd.DataFrame({"t": t, "o": o, "h": h, "l": l, "c": c, "v": v, "qv": v * c, "tq": v * c * 0.5})
-data = {f"S{i}USDT": series(i) for i in range(12)}
+SEED = int(os.environ.get("SEED", 0))
+data = {f"S{i}USDT": series(i + SEED * 100) for i in range(12)}
 st = daily.study(data); st["n_coins"] = 12
 for k, s in st["types"].items(): print(f"{s['name']:40} eğitim n{s['train']['n']} R{s['train']['avg_R']}  test n{s['test']['n']} R{s['test']['avg_R']} → {s['verdict']}")
 guv = [k for k, s in st["types"].items() if s["verdict"] == "güvenilir"]

@@ -83,8 +83,8 @@ Karar: ❌ hiçbir kural TEST dönemini yeterince geçemedi; kâğıt hesapta il
 - XLM: dip 0.13, şimdi 0.1375 (8 saat önce tetik), 30g düşüş %-30.6, RVOL 1.59
 - TRUMP: dip 0.891, şimdi 0.939 (8 saat önce tetik), 30g düşüş %-53.6, RVOL 1.75
 - ZRO: dip 1.342, şimdi 1.453 (8 saat önce tetik), 30g düşüş %-41.2, RVOL 1.75
-- FET: dip 0.1209, şimdi 0.1302 (8 saat önce tetik), 30g düşüş %-42.2, RVOL 1.49
 - ARB: dip 0.124, şimdi 0.1323 (8 saat önce tetik), 30g düşüş %-39.2, RVOL 0.75
+- FET: dip 0.1209, şimdi 0.1302 (8 saat önce tetik), 30g düşüş %-42.2, RVOL 1.49
 - ICP: dip 2.103, şimdi 2.172 (8 saat önce tetik), 30g düşüş %-32.6, RVOL 1.88
 - XPL: dip 0.04034, şimdi 0.04344 (8 saat önce tetik), 30g düşüş %-53.5, RVOL 1.74
 - APT: dip 0.4283, şimdi 0.4492 (8 saat önce tetik), 30g düşüş %-51.9, RVOL 2.38
@@ -92,8 +92,8 @@ Karar: ❌ hiçbir kural TEST dönemini yeterince geçemedi; kâğıt hesapta il
 - RENDER: dip 1.314, şimdi 1.364 (8 saat önce tetik), 30g düşüş %-34.3, RVOL 2.0
 - TIA: dip 0.3278, şimdi 0.3454 (8 saat önce tetik), 30g düşüş %-57.4, RVOL 2.22
 - STRK: dip 0.032, şimdi 0.03557 (8 saat önce tetik), 30g düşüş %-63.9, RVOL 1.71
-- ETHFI: dip 0.4685, şimdi 0.5045 (8 saat önce tetik), 30g düşüş %-35.8, RVOL 1.45
 - SHIB: dip 3.7e-06, şimdi 3.86e-06 (8 saat önce tetik), 30g düşüş %-29.8, RVOL 2.03
+- ETHFI: dip 0.4685, şimdi 0.5045 (8 saat önce tetik), 30g düşüş %-35.8, RVOL 1.45
 - BONK: dip 2.19e-06, şimdi 2.34e-06 (8 saat önce tetik), 30g düşüş %-35.0, RVOL 2.34
 - OP: dip 0.0757, şimdi 0.0812 (8 saat önce tetik), 30g düşüş %-47.4, RVOL 2.24
 - VIRTUAL: dip 0.4175, şimdi 0.4389 (8 saat önce tetik), 30g düşüş %-40.9, RVOL 1.96
@@ -103,8 +103,8 @@ Karar: ❌ hiçbir kural TEST dönemini yeterince geçemedi; kâğıt hesapta il
 - EIGEN: dip 0.1246, şimdi 0.1328 (8 saat önce tetik), 30g düşüş %-55.8, RVOL 2.47
 - CRV: dip 0.1959, şimdi 0.2072 (8 saat önce tetik), 30g düşüş %-52.2, RVOL 1.83
 - ETC: dip 5.62, şimdi 5.83 (8 saat önce tetik), 30g düşüş %-31.5, RVOL 1.51
-- ZK: dip 0.00742, şimdi 0.00791 (8 saat önce tetik), 30g düşüş %-60.6, RVOL 2.08
 - PLUME: dip 0.01152, şimdi 0.01252 (8 saat önce tetik), 30g düşüş %-45.4, RVOL 1.56
+- ZK: dip 0.00742, şimdi 0.00791 (8 saat önce tetik), 30g düşüş %-60.6, RVOL 2.08
 - STX: dip 0.2531, şimdi 0.2629 (8 saat önce tetik), 30g düşüş %-41.9, RVOL 1.66
 - ATOM: dip 1.218, şimdi 1.28 (8 saat önce tetik), 30g düşüş %-33.0, RVOL 1.72
 - LDO: dip 0.2556, şimdi 0.2686 (8 saat önce tetik), 30g düşüş %-39.1, RVOL 1.6
@@ -135,5 +135,11 @@ Karar: ❌ hiçbir kural TEST dönemini yeterince geçemedi; kâğıt hesapta il
 - XRP: dip 0.9975, şimdi 0.9478 (47 saat önce tetik), 30g düşüş %-28.7, RVOL 1.19 · 🔥 CoinGecko trend
 
 CoinGecko'da şu an trend olanlar: BTC, KAVA, HYPE, ETH, XRP, QTC, SOL, DOGE, ZEC, BDX, PI, AERO, PEPE, PENGU, WLFI
+
+## İleri test defteri (canlı kaydedilen dipler, 7 gün sonra sonuçlanır; açık: 71)
+
+- Tümü: 0 dip, %None başarılı dönüş, ort NoneR
+- Kurala uyanlar: 0 dip, %None başarılı, ort NoneR
+- İnternette trend olan (CoinGecko): 0 dip, %None başarılı, ort NoneR · trend olmayan: 0 dip, %None, ort NoneR
 
 Simülasyon/araştırmadır, yatırım tavsiyesi değildir.

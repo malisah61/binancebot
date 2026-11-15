@@ -139,7 +139,8 @@ def load_coin(sym, files):
     met = None
     if ms:
         met = pd.concat(ms)
-        met["ts"] = pd.to_datetime(met["create_time"], utc=True).astype("int64") // 10 ** 6
+        # pandas sürümünden bağımsız milisaniye (pandas 3 mikrosaniye çözünürlük kullanıyor)
+        met["ts"] = (pd.to_datetime(met["create_time"], utc=True) - pd.Timestamp("1970-01-01", tz="UTC")) // pd.Timedelta(milliseconds=1)
         met = met.rename(columns={"sum_open_interest_value": "oi", "count_long_short_ratio": "gls",
                                   "sum_toptrader_long_short_ratio": "tls"})[["ts", "oi", "gls", "tls"]]
         met = met.apply(pd.to_numeric, errors="coerce").dropna(subset=["ts"]).sort_values("ts").drop_duplicates("ts")

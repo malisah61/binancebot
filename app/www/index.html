@@ -137,7 +137,7 @@ async function loadExt() { try { const r = await fetch(`https://raw.githubuserco
 loadExt();
 function extOverview() {
   const X = S.ext; if (!X) return "";
-  const EVN = { crash: "Sert düşüş", ctpump: "Trend tersi pompa" };
+  const EVN = { crash: "Sert düşüş", ctpump: "Trend tersi pompa", pump: "Sert yükseliş" };
   const st = (s) => s && s.n ? `${s.n} işlem · %${s.win} kazanç · ort ${s.avg_R}R · PF ${s.pf}` : "işlem yok";
   const picks = Object.entries(X.picks || {}).map(([ev, p]) => `<div class="why"><b>${EVN[ev]}:</b> ${p.desc} (≥%${Math.round(p.th * 100)}, ${p.tiers.join("/")}) — ${p.adopted ? '<b class="up">testte doğrulandı</b>' : '<b class="dn">testte tutmadı, kâğıt deneme</b>'}<br><span class="mut sm">TEST: ${st(p.test)}</span></div>`).join("");
   const sc = (X.scan || []).slice(0, 15).map((x) => `<div class="feat coin" data-s="${x.sym}"><div class="row between"><b>${x.sym.replace("USDT", "")} <span class="mut sm">${x.tier}</span></b><span class="mut sm">${x.hours_ago} saat önce</span></div>

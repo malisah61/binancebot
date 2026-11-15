@@ -43,7 +43,7 @@ for label, bounce in (("rastgele", False), ("tepkili", True)):
         assert not any(p["adopted"] for p in picks.values()), "rastgele yürüyüşte benimsenme olmamalı"
     else:
         assert picks["crash"]["name"].startswith("L"), picks["crash"]
-md = X.to_md({"time": int(time.time()*1000), "coins": N, "split": int(split), "n_events": {"crash": 1, "ctpump": 1}, "grid": G,
+md = X.to_md({"time": int(time.time()*1000), "coins": N, "split": int(split), "n_events": {"crash": 1, "ctpump": 1, "pump": 1}, "grid": G,
               "picks": picks, "compare": cmps, "scan": [], "ledger": None, "regime_now": {"regime": "BTC düşüşte", "btc30": -5}})
 assert "Sert düşüş" in md
 print("UÇ HAREKET TESTİ GEÇTİ")

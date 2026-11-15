@@ -59,6 +59,9 @@ VARIANTS = {
         "S_mkt": (-1, "mkt", "Sert düşüşte hemen SHORT (devam)"),
         "S_lim": (-1, "lim", "Sert düşüşte 1.5 ATR tepki yukarısına limit SHORT"),
         "S_conf": (-1, "conf", "Sert düşüşte tepki bitip kırılım gelince SHORT"),
+        "S_f38": (-1, "fib", "Düşüşün %38.2 tepkisinde limit SHORT (aynı yön)"),
+        "S_f50": (-1, "fib", "Düşüşün %50 tepkisinde limit SHORT (aynı yön)"),
+        "S_f62": (-1, "fib", "Düşüşün %61.8 tepkisinde limit SHORT (aynı yön)"),
     },
     "ctpump": {
         "S_mkt": (-1, "mkt", "Trend tersi pompada hemen SHORT (geri sönme)"),
@@ -67,9 +70,21 @@ VARIANTS = {
         "L_mkt": (1, "mkt", "Trend tersi pompada hemen LONG (devam)"),
         "L_lim": (1, "lim", "Trend tersi pompada 1.5 ATR geri çekilmeye limit LONG"),
         "L_conf": (1, "conf", "Trend tersi pompada geri çekilme sonrası yeni tepe kırılımında LONG"),
+        "L_f38": (1, "fib", "Pompanın %38.2 geri çekilmesinde limit LONG (aynı yön)"),
+        "L_f50": (1, "fib", "Pompanın %50 geri çekilmesinde limit LONG (aynı yön)"),
+        "L_f62": (1, "fib", "Pompanın %61.8 geri çekilmesinde limit LONG (aynı yön)"),
+    },
+    "pump": {
+        "L_mkt": (1, "mkt", "Sert yükselişte hemen LONG"),
+        "L_f38": (1, "fib", "Yükselişin %38.2 geri çekilmesinde limit LONG (aynı yön)"),
+        "L_f50": (1, "fib", "Yükselişin %50 geri çekilmesinde limit LONG (aynı yön)"),
+        "L_f62": (1, "fib", "Yükselişin %61.8 geri çekilmesinde limit LONG (aynı yön)"),
+        "S_mkt": (-1, "mkt", "Sert yükselişte hemen SHORT"),
+        "S_conf": (-1, "conf", "Sert yükselişten sonra kırılım mumu gelince SHORT"),
     },
 }
-EVENT_NAME = {"crash": "Sert düşüş", "ctpump": "Trend tersi sert yükseliş"}
+EVENT_NAME = {"crash": "Sert düşüş", "ctpump": "Trend tersi sert yükseliş", "pump": "Sert yükseliş (her trendde)"}
+FIB_WAIT = 24   # geri çekilme limit emri 24 saat bekler
 FEATS = {"size": "Hareket büyüklüğü %", "ext_atr": "Hareket / ATR", "rvol24": "Son 24s hacim / önceki 7g ort.",
          "taker24": "Son 24s agresif alım oranı", "ret30": "30 günlük getiri %", "btc24": "BTC son 24s %",
          "wick": "Olay mumunun ters fitil oranı", "btc30": "BTC son 30g %", "rank": "Hacim sırası (büyük = küçük coin)", "oi24": "OI değişimi 24s %",
@@ -178,13 +193,15 @@ def btc_ret24(k):
 
 
 # ---------------------------------------------------------------- işlem simülasyonu
-def sim(o, h, l, c, i, d, entry, stop, mode, cost, fund=0.0, hold=HOLD):
+def sim(o, h, l, c, i, d, entry, stop, mode, cost, fund=0.0, hold=HOLD, wait=WAIT):
     """i: olay mumu. d: +1 long / -1 short. mode mkt|lim (conf çağıran tarafta mkt'ye çevrilir).
     Döner: dict(R, risk, mae, bars, filled). Aynı mumda stop ve hedef → önce stop (temkinli)."""
     n = len(c)
-    if mode == "lim":
+    if mode in ("lim", "fib"):
+        if mode == "fib":
+            wait = FIB_WAIT
         j0 = None
-        for j in range(i + 1, min(n, i + 1 + WAIT)):
+        for j in range(i + 1, min(n, i + 1 + wait)):
             if (d == 1 and l[j] <= entry) or (d == -1 and h[j] >= entry):
                 j0 = j
                 if (d == 1 and o[j] < entry) or (d == -1 and o[j] > entry):
@@ -244,6 +261,14 @@ def plan(ev, name, o, h, l, c, i, a, lo24, hi24):
     """Varyant için (giriş, stop, biçim, giriş mumu) üret."""
     d, mode, _ = VARIANTS[ev][name]
     e = c[i]
+    if mode == "fib":
+        f = {"38": 0.382, "50": 0.5, "62": 0.618}[name[-2:]]
+        mv = hi24 - lo24
+        if d == -1:     # düşüşten sonra tepkiye short: seviye dipten f kadar yukarıda, stop f+0.25 üstünde
+            lv = lo24 + f * mv
+            return (lv, lo24 + (f + 0.25) * mv + 0.3 * a, "fib", i) if lv > e else None
+        lv = hi24 - f * mv   # yükselişten sonra geri çekilmeye long
+        return (lv, hi24 - (f + 0.25) * mv - 0.3 * a, "fib", i) if lv < e else None
     if ev == "crash":
         if name == "L_mkt":
             return e, min(lo24 - 0.5 * a, e - a), "mkt", i
@@ -300,10 +325,13 @@ def events(sym, k, market, rank, btc=None, label=True):
     last = {}
     for i in range(744, n):
         evs = [("crash", th) for th in DROPS if drop[i] <= -th and drop[i - 1] > -th]
+        up = [th for th in PUMPS if pump[i] >= th and pump[i - 1] < th]
+        evs += [("pump", th) for th in up]
         if c[i - 24] < e200[i - 24] and c[i - 24] / c[i - 744] - 1 < -0.10:
-            evs += [("ctpump", th) for th in PUMPS if pump[i] >= th and pump[i - 1] < th]
+            evs += [("ctpump", th) for th in up]
         for ev, th in evs:
             size = -drop[i] if ev == "crash" else pump[i]
+            
             if i - last.get((ev, th), -10 ** 9) < COOL:
                 continue
             last[(ev, th)] = i
@@ -367,13 +395,23 @@ def grid(E, split):
     res = []
     for ev, V in VARIANTS.items():
         ths = DROPS if ev == "crash" else PUMPS
+        nev = {}
         for name, (d, mode, desc) in V.items():
             for th in ths:
                 for tiers in (None, ("küçük",), ("orta", "küçük"), ("büyük",)):
                     mk = (lambda D, tiers=tiers: D["tier"].isin(tiers)) if tiers else None
                     for rg in REGIMES:
-                        a, b = stats(collect(tr, ev, name, th, mk, rg)), stats(collect(te, ev, name, th, mk, rg))
-                        res.append({"ev": ev, "name": name, "desc": desc, "th": th, "tiers": list(tiers) if tiers else ["tümü"],
+                        ta, tb = collect(tr, ev, name, th, mk, rg), collect(te, ev, name, th, mk, rg)
+                        a, b = stats(ta), stats(tb)
+                        key = (th, tiers, rg)
+                        if key not in nev:
+                            D = E[(E["ev"] == ev) & (E["th"] == th)]
+                            if mk is not None:
+                                D = D[mk(D)]
+                            if REGIMES[rg] is not None:
+                                D = D[REGIMES[rg](D)]
+                            nev[key] = max(len(D), 1)
+                        res.append({"fill": round(100 * (len(ta) + len(tb)) / nev[key], 1), "ev": ev, "name": name, "desc": desc, "th": th, "tiers": list(tiers) if tiers else ["tümü"],
                                     "regime": rg, "train": a, "test": b})
     return res
 
@@ -508,13 +546,13 @@ def to_md(r):
     d = datetime.fromtimestamp(r["time"] / 1000, timezone.utc) + timedelta(hours=3)
     L = [f"# Uç hareketler: sert düşenler ve trend tersi yükselenler — {d:%d.%m.%Y %H:%M}", "",
          f"{r['coins']} coin (ilk {N_COINS} hacim; büyük 1-50, orta 51-150, küçük 151+), son {DAYS} gün, 1s mum. "
-         f"Olaylar: {r['n_events']['crash']} sert düşüş, {r['n_events']['ctpump']} trend tersi pompa. "
+         f"Olaylar: {r['n_events']['crash']} sert düşüş, {r['n_events']['ctpump']} trend tersi pompa, {r['n_events'].get('pump', 0)} sert yükseliş (tümü). "
          "Eğitim ilk %70, TEST son %30 (model görmeden).", ""]
     for ev in VARIANTS:
         L += [f"## {EVENT_NAME[ev]} — varyantlar (tüm coinler, en düşük eşik)", "", "| Varyant | Eğitim | TEST |", "|---|---|---|"]
         for g in r["grid"]:
             if g["ev"] == ev and g["th"] == (DROPS if ev == "crash" else PUMPS)[0] and g["tiers"] == ["tümü"] and g["regime"] == "tümü":
-                L.append(f"| {g['desc']} | {fmt_st(g['train'])} | {fmt_st(g['test'])} |")
+                L.append(f"| {g['desc']} (dolma %{g.get('fill')}) | {fmt_st(g['train'])} | {fmt_st(g['test'])} |")
         L += ["", f"### {EVENT_NAME[ev]} — coin büyüklüğüne göre (TEST, en düşük eşik)", "", "| Varyant | büyük | orta+küçük | küçük |", "|---|---|---|---|"]
         for name in VARIANTS[ev]:
             cells = []
@@ -545,6 +583,17 @@ def to_md(r):
                     L.append(f"| {c['name']} | {c['test']['win']} | {c['test']['loss']} | {c['train']['d']} / {c['test']['d']} | {'✓' if c['stable'] else ''} |")
         L.append("")
     good = [g for g in r["grid"] if g["adopt"]]
+    for ev in VARIANTS:                                     # aynı yönlü geri çekilme özeti
+        rows = [g for g in r["grid"] if g["ev"] == ev and g["tiers"] == ["tümü"] and VARIANTS[ev][g["name"]][1] == "fib"]
+        if rows:
+            L += [f"### Aynı yönlü geri çekilme girişi — {EVENT_NAME[ev]} (tüm coinler)", "",
+                  "| Seviye | Hareket ≥ | Piyasa | dolma % | Eğitim | TEST |", "|---|---|---|---|---|---|"]
+            for g in rows:
+                if g["regime"] != "tümü" and g["th"] != (DROPS if ev == "crash" else PUMPS)[1]:
+                    continue
+                sh = lambda s: f"{s['n']} işl, %{s['win']}, ort {s['avg_R']}R, PF {s['pf']}" if s.get("n") else "-"
+                L.append(f"| %{g['name'][-2:].replace('38','38.2').replace('62','61.8')} | %{int(g['th']*100)} | {g['regime']} | {g['fill']} | {sh(g['train'])} | {sh(g['test'])} |")
+            L.append("")
     L += ["## Testi geçen tüm kombinasyonlar (bilgi amaçlı — eğitimde seçilmedikçe benimsenmez)", ""]
     good.sort(key=lambda g: -(g["test"].get("avg_R") or 0) * min(g["test"]["n"], 200))
     L += [f"- {EVENT_NAME[g['ev']]} · {g['desc']} · ≥%{int(g['th']*100)} · {', '.join(g['tiers'])} · {g['regime']} · eğitim ort {g['train']['avg_R']}R (n {g['train']['n']}) · TEST {fmt_st(g['test'])}" for g in good[:15]] or ["- Yok."]

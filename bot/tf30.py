@@ -124,7 +124,7 @@ def tstats(T):
             "long": len(lo), "short": len(T) - len(lo), "liq": int(sum(x["liq"] for x in T))}
 
 
-def replay(T, start=1000.0):
+def replay(T, start=1000.0, frac=None, max_pos=None):
     """Gerçek hesap kurallarıyla tek hesap: marjin = bakiye×%15, en çok 3 açık, günlük %5 zarar limiti."""
     eq, peak, mdd, opened, skipped, n, day0 = start, start, 0.0, {}, 0, 0, {}
     ev = sorted([(x["t"], 1, i) for i, x in enumerate(T)] + [(x["t_exit"] + 1, 0, i) for i, x in enumerate(T)])
@@ -136,10 +136,10 @@ def replay(T, start=1000.0):
                 eq += opened.pop(i) * T[i]["roe"]
                 peak, mdd = max(peak, eq), max(mdd, 1 - eq / peak)
                 n += 1
-        elif len(opened) >= RULES["max_pos"] or eq < day0[day] * (1 - RULES["daily"]) or any(T[j]["sym"] == T[i]["sym"] for j in opened):
+        elif len(opened) >= (max_pos or RULES["max_pos"]) or eq < day0[day] * (1 - RULES["daily"]) or any(T[j]["sym"] == T[i]["sym"] for j in opened):
             skipped += 1
         else:
-            opened[i] = eq * RULES["frac"]
+            opened[i] = eq * (frac or RULES["frac"])
     return {"final": round(eq, 1), "ret": round((eq / start - 1) * 100, 1), "mdd": round(mdd * 100, 1), "n": n, "skip": skipped}
 
 

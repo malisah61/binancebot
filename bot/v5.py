@@ -13,7 +13,7 @@ import pandas as pd
 WEIGHTS = {"trend": 20, "momentum": 18, "oi": 15, "volume": 10, "deriv": 10, "book": 10, "smc": 10, "vwap": 5}
 NAMES = {"trend": "Trend", "momentum": "Momentum", "oi": "Open Interest", "volume": "Hacim",
          "deriv": "Funding+L/S", "book": "Emir defteri", "smc": "FVG+Likidite avı", "vwap": "VWAP"}
-TF_MS = {"15m": 900_000, "30m": 1_800_000, "1h": 3_600_000, "2h": 7_200_000, "4h": 14_400_000, "1d": 86_400_000}
+TF_MS = {"15m": 900_000, "30m": 1_800_000, "1h": 3_600_000, "2h": 7_200_000, "3h": 10_800_000, "4h": 14_400_000, "1d": 86_400_000}
 
 
 def ema(s, n):

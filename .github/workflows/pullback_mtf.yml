@@ -1,6 +1,13 @@
 name: Geri çekilme çoklu zaman dilimi
 on:
   workflow_dispatch:
+    inputs:
+      tfs:
+        description: "Zaman dilimleri (virgülle)"
+        default: "4h,3h,2h"
+      coins:
+        description: "Coin sayısı (hacme göre)"
+        default: "300"
 permissions:
   contents: write
 concurrency:
@@ -9,7 +16,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -28,12 +35,14 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PB_TFS: ${{ inputs.tfs }}
+          PB_COINS: ${{ inputs.coins }}
         run: python bot/pullback_mtf.py
       - name: Kaydet
         run: |
           git config user.name "kripto-bot"
           git config user.email "kripto-bot@users.noreply.github.com"
-          git add state/pullback_mtf.json docs/arastirma
+          git add state/pullback_*.json docs/arastirma
           git diff --cached --quiet && exit 0
           git commit -m "geri çekilme çoklu zaman dilimi" -q
           for i in 1 2 3 4 5; do git pull --rebase -q && git push -q && exit 0; sleep 7; done

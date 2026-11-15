@@ -32,8 +32,8 @@ import tf30  # noqa: E402
 import v5  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TFS = ["1d", "4h", "2h", "1h"]
-HOLD = {"1d": 20, "4h": 42, "2h": 48, "1h": 72}
+TFS = os.environ.get("PB_TFS", "1d,4h,2h,1h").split(",")
+HOLD = {"1d": 20, "4h": 42, "3h": 48, "2h": 48, "1h": 72}
 D_DAYS = 3 * 365          # günlük grafik için 3 yıl (EMA200 ısınması)
 ENTRIES = {"ema20": "EMA20'ye limit", "f38": "%38.2 geri çekilmeye limit", "f50": "%50 geri çekilmeye limit", "donus": "EMA20 altına sarkıp dönünce piyasa"}
 FEATS = {"f_rsi": "RSI", "f_z": "Z-puanı (fiyat sapması)", "f_htf": "Üst periyot trendi", "f_rvol": "Hacim patlaması (RVOL)",
@@ -140,7 +140,7 @@ def coin_trades(s, df, tf, btc_tr, tier, split):
                 if not r.get("filled"):
                     continue
                 tr = {"sym": s, "t": int(t[min(r["start"], n - 1)]), "t_exit": int(t[min(r["start"] + r["bars"] - 1, n - 1)]),
-                      "dir": d, "R": r["R"], "roe": 3 * r["R"] * r["risk"], "liq": False, "btc_ok": bool(bt[i] == d)}
+                      "dir": d, "R": r["R"], "roe": 3 * r["R"] * r["risk"], "liq": False, "btc_ok": bool(bt[i] == d), "tier": tier}
                 out.setdefault(ent, []).append(tr)
                 if ent == "f38":
                     row = {q: float(R[q].iloc[i]) if q in R and R[q].iloc[i] == R[q].iloc[i] else np.nan for q in FEATS if q.startswith("f_")}
@@ -190,6 +190,8 @@ def analyze(data1h, daily, rank, today):
     rep = {"tfs": {}, "split": split, "dsplit": dsplit}
     for tf in TFS:
         sp = dsplit if tf == "1d" else split
+        if tf == "1d" and not daily:
+            continue
         src = daily if tf == "1d" else {s: frames(k, tf) for s, (k, m) in data1h.items()}
         if "BTCUSDT" not in src:
             continue
@@ -206,7 +208,10 @@ def analyze(data1h, daily, rank, today):
                 TT = [x for x in T if flt == "tümü" or x["btc_ok"]]
                 tr, te = [x for x in TT if x["t"] < sp], [x for x in TT if x["t"] >= sp]
                 res[f"{ent}|{flt}"] = {"desc": ENTRIES[ent] + (", BTC aynı trendde" if flt == "btc" else ""), "train": tf30.tstats(tr), "test": tf30.tstats(te),
-                                       "replay_train": tf30.replay(tr), "replay_test": tf30.replay(te)}
+                                       "replay_train": tf30.replay(tr), "replay_test": tf30.replay(te),
+                                       "replay6_train": tf30.replay(tr, frac=0.075, max_pos=6), "replay6_test": tf30.replay(te, frac=0.075, max_pos=6),
+                                       "tiers": {tr_: {"train": tf30.tstats([x for x in tr if x["tier"] == tr_]), "test": tf30.tstats([x for x in te if x["tier"] == tr_])}
+                                                 for tr_ in ("büyük", "orta", "küçük")}}
         cand = [k for k, v in res.items() if v["train"].get("n", 0) >= 60]
         pick = max(cand, key=lambda k: res[k]["train"]["avg_roe"]) if cand else None
         te = res[pick]["test"] if pick else {}
@@ -229,8 +234,8 @@ def analyze(data1h, daily, rank, today):
 def to_md(r):
     d = datetime.fromtimestamp(r["time"] / 1000, timezone.utc) + timedelta(hours=3)
     fs = tf30.fs2
-    L = [f"# Trend yönünde geri çekilmede giriş — 1g / 4s / 2s / 1s ({d:%d.%m.%Y})", "",
-         f"{r['coins']} futures coini; 1 saat-4 saat: son 1 yıl, 1 gün: son 3 yıl. Eğitim %70 → TEST %30. 3x, komisyon + kayma dahil.", "",
+    L = [f"# Trend yönünde geri çekilmede giriş — {' / '.join(TFS)} ({d:%d.%m.%Y})", "",
+         f"{r['coins']} futures coini; saatlik dilimler: son 1 yıl{', 1 gün: son 3 yıl' if '1d' in TFS else ''}. Eğitim %70 → TEST %30. 3x, komisyon + kayma dahil.", "",
          "## Karşılaştırma (TEST dönemi, gerçek hesap kurallarıyla 1000$)", "", "| Giriş | " + " | ".join(r["tfs"]) + " |", "|---" * (len(r["tfs"]) + 1) + "|"]
     for ent in ENTRIES:
         for flt in ("tümü", "btc"):
@@ -244,6 +249,11 @@ def to_md(r):
         L += ["", f"## {tf} (eğitim → {sp:%d.%m.%Y} → TEST)", "", "| Giriş | Eğitim | TEST | Gerçek kurallarla eğitim / TEST |", "|---|---|---|---|"]
         for k, x in v["rules"].items():
             L.append(f"| {x['desc']} | {fs(x['train'])} | {fs(x['test'])} | %{x['replay_train']['ret']:+} / %{x['replay_test']['ret']:+} (düşüş %{x['replay_test']['mdd']}) |")
+        L += ["", f"**{tf} — coin büyüklüğüne göre TEST (PF; büyük 1-50, orta 51-150, küçük 151+) ve 6 işlem × %7.5 ile yeniden oynatma**", "",
+              "| Giriş | büyük | orta | küçük | 6×%7.5 eğitim / TEST |", "|---|---|---|---|---|"]
+        for k, x in v["rules"].items():
+            tc = [f"{x['tiers'][q]['test']['n']} işl · PF {x['tiers'][q]['test']['pf']}" if x["tiers"][q]["test"].get("n") else "-" for q in ("büyük", "orta", "küçük")]
+            L.append(f"| {x['desc']} | " + " | ".join(tc) + f" | %{x['replay6_train']['ret']:+} / %{x['replay6_test']['ret']:+} (düşüş %{x['replay6_test']['mdd']}) |")
         if v["pick"]:
             L.append(f"\n**Eğitimde en iyi:** {v['rules'][v['pick']]['desc']} → " + ("✅ TEST'te DOĞRULANDI" if v["adopted"] else "❌ TEST'te tutmadı"))
     L += ["", "## Ortak göstergeler (kazanan vs kaybeden, d = etki büyüklüğü; eğitim/TEST, her zaman diliminde)", "",
@@ -261,14 +271,14 @@ def main():
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     data, rank = X.load_all(today)
     data = {s: v for s, v in data.items() if v[1] == "fut"}
-    daily = load_daily(list(data), today)
+    daily = load_daily(list(data), today) if "1d" in TFS else {}
     print(f"{len(data)} coin 1s, {len(daily)} coin günlük ({time.time()-t0:.0f} sn)")
     r = analyze(data, daily, rank, today)
     r.update(time=int(time.time() * 1000), coins=len(data))
-    json.dump(r, open(os.path.join(ROOT, "state", "pullback_mtf.json"), "w"), ensure_ascii=False, default=float)
+    json.dump(r, open(os.path.join(ROOT, "state", f"pullback_{'_'.join(TFS)}.json"), "w"), ensure_ascii=False, default=float)
     md = to_md(r)
     os.makedirs(os.path.join(ROOT, "docs", "arastirma"), exist_ok=True)
-    open(os.path.join(ROOT, "docs", "arastirma", f"geri-cekilme-mtf-{(today + timedelta(hours=3)):%Y-%m-%d}.md"), "w", encoding="utf-8").write(md)
+    open(os.path.join(ROOT, "docs", "arastirma", f"geri-cekilme-{'-'.join(TFS)}-{(today + timedelta(hours=3)):%Y-%m-%d}.md"), "w", encoding="utf-8").write(md)
     print(md)
     import notify
     chat = os.environ.get("TELEGRAM_CHAT_ID") or json.load(open(os.path.join(ROOT, "state", "futures.json"))).get("chat_id")

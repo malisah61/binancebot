@@ -8,8 +8,9 @@ HOSTS = ["https://data-api.binance.vision", "https://api.binance.com", "https://
 STABLE = {"USDC", "FDUSD", "TUSD", "BUSD", "DAI", "USDP", "EUR", "EURI", "AEUR", "USDE", "XUSD",
           "PAXG", "WBTC", "WBETH", "BFUSD", "USD1", "TRY", "BRL", "GBP", "XAUT", "RLUSD", "PYUSD", "USDS"}
 # Kripto olmayan varlıklar (tokenize hisse/emtia) — farklı piyasa saatleri ve dinamikleri var
-NON_CRYPTO = {"MSTRB", "SPCXB", "TSLAB", "NVDAB", "AAPLB", "COINB", "HOODB", "AMZNB", "GOOGLB", "METAB", "MSFTB",
-              "CRCLB", "SPYB", "QQQB", "XAU", "XAG"}
+NON_CRYPTO = {"MSTRB", "SPCXB", "SNDKB", "TSLAB", "NVDAB", "AAPLB", "COINB", "HOODB", "AMZNB", "GOOGLB", "GOOGB", "METAB",
+              "MSFTB", "CRCLB", "SPYB", "QQQB", "PLTRB", "AMDB", "NFLXB", "INTCB", "ORCLB", "AVGOB", "BABAB", "GMEB", "MUB",
+              "SNOWB", "UBERB", "SHOPB", "IBMB", "DISB", "BRKB", "JPMB", "VB", "MAB", "XAU", "XAG", "U"}
 _session = requests.Session()
 
 
@@ -44,6 +45,12 @@ def top_usdt(n=100):
             continue
         if float(x["quoteVolume"]) <= 0 or int(x.get("count", 0)) == 0:
             continue
+        # sabit fiyatlı (stablecoin benzeri) varlıklar: 24 saatte %0.5'ten az oynuyorsa ele
+        try:
+            if float(x["lowPrice"]) > 0 and float(x["highPrice"]) / float(x["lowPrice"]) - 1 < 0.005:
+                continue
+        except (KeyError, ValueError):
+            pass
         rows.append(x)
     rows.sort(key=lambda x: float(x["quoteVolume"]), reverse=True)
     return rows[:n]

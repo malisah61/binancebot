@@ -1199,11 +1199,15 @@
   [
    1794823975188,
    4881.62
+  ],
+  [
+   1794824874462,
+   4883.4
   ]
  ],
  "errors": [],
  "halted": false,
- "equity": 4881.62,
+ "equity": 4883.4,
  "pending": {},
  "no_edge_note": false
 }

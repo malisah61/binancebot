@@ -141,6 +141,50 @@ def sim_nostop(o, h, l, c, i, d, entry, mode, tp_risk, hold, cost, be=False, wai
     return {"roe": LEV * (got - cost), "liq": False, "start": start, "bars": min(k, end) - start + 1, "mae": mae}
 
 
+def sim_trail(o, h, l, c, a, i, d, entry, stop, mode, hold, cost, k_atr, tp1=True, wait=6):
+    """İz süren stop: (tp1=True) 1.5R'de yarısı alınır, stop girişe; kalan yarı en iyi fiyatın k×ATR gerisinden takip edilir, TP2 yok.
+    (tp1=False) hedef yok; fiyat +1R gidince stop girişe, sonra en iyi fiyatın k×ATR gerisinden tüm pozisyon takip edilir."""
+    n = len(c)
+    if mode == "lim":
+        j0 = None
+        for j in range(i + 1, min(n, i + 1 + wait)):
+            if (d == 1 and l[j] <= entry) or (d == -1 and h[j] >= entry):
+                j0 = j
+                if (d == 1 and o[j] < entry) or (d == -1 and o[j] > entry):
+                    entry = o[j]
+                break
+        if j0 is None:
+            return None
+        start = j0
+    else:
+        start = i + 1
+    risk = abs(entry - stop)
+    t1 = entry + d * 1.5 * risk
+    got, left, armed, st, best = 0.0, 1.0, False, stop, entry
+    end = min(n - 1, start + hold)
+    k = start
+    while k <= end:
+        adv, fav = (l[k], h[k]) if d == 1 else (h[k], l[k])
+        if (d == 1 and adv <= st) or (d == -1 and adv >= st):
+            px = o[k] if ((d == 1 and o[k] < st) or (d == -1 and o[k] > st)) and k > start else st
+            got += left * d * (px - entry) / entry
+            left = 0
+            break
+        best = max(best, fav) if d == 1 else min(best, fav)
+        if tp1 and not armed and ((d == 1 and fav >= t1) or (d == -1 and fav <= t1)):
+            got += 0.5 * d * (t1 - entry) / entry
+            left, armed, st = 0.5, True, entry
+        if not tp1 and not armed and d * (best - entry) >= risk:
+            armed, st = True, entry
+        if armed:
+            trail = best - d * k_atr * a[k]
+            st = max(st, trail) if d == 1 else min(st, trail)
+        k += 1
+    if left > 0:
+        got += left * d * (c[min(k, end)] - entry) / entry
+    return {"roe": LEV * (got - cost), "start": start, "bars": min(k, end) - start + 1, "move": d * (best - entry) / entry}
+
+
 def coin_trades(s, df, tf, btc_tr, tier, split):
     o, h, l, c = (df[q].values.astype(float) for q in "ohlc")
     t = df["t"].values
@@ -198,6 +242,12 @@ def coin_trades(s, df, tf, btc_tr, tier, split):
                     variants = [("nostop", False, None, r0)]
                     for m in (1.5, 2.0, 3.0):
                         variants += [(f"w{m}s", True, lv - d * m * r0, r0), (f"w{m}x", True, lv - d * m * r0, m * r0)]
+                    for tag, tp1_, kk in (("tr2", True, 2.0), ("tr3", True, 3.0), ("trn2", False, 2.0), ("trn3", False, 3.0)):
+                        q = sim_trail(o, h, l, c, a, j, d, lv, stop, mode, HOLD[tf] * 3, cost, kk, tp1=tp1_)
+                        if q:
+                            out.setdefault(f"{ent}_{tag}", []).append({"sym": s, "t": int(t[min(q["start"], n - 1)]),
+                                "t_exit": int(t[min(q["start"] + q["bars"] - 1, n - 1)]), "dir": d, "R": q["roe"] / 3, "roe": q["roe"],
+                                "liq": False, "btc_ok": bool(bt[i] == d), "tier": tier})
                     for tag, be, st_, tpr in variants:
                         q = sim_nostop(o, h, l, c, j, d, lv, mode, tpr, HOLD[tf], cost, be=be, stop=st_)
                         if q:
@@ -293,12 +343,14 @@ def analyze(data1h, daily, rank, today):
             return P
         pool = mkpool()
         ns = {}
-        labs = [("Stoplu (şu anki)", ""), ("Stopsuz", "_nostop")]
-        for m in (1.5, 2.0, 3.0):
-            labs += [(f"Stop {m:g}× geniş, hedefler aynı", f"_w{m}s"), (f"Stop {m:g}× geniş, hedefler de {m:g}×", f"_w{m}x")]
+        labs = [("Stoplu (şu anki: TP1 yarı + TP2)", ""), ("TP1 yarı + kalan 2 ATR iz süren stop", "_tr2"), ("TP1 yarı + kalan 3 ATR iz süren stop", "_tr3"),
+                ("Hedefsiz, +1R'den sonra 2 ATR iz süren stop", "_trn2"), ("Hedefsiz, +1R'den sonra 3 ATR iz süren stop", "_trn3"), ("Stopsuz", "_nostop")]
         for lab, suf in labs:
             P = mkpool(suf)
-            row = {"trade": tf30.tstats(P), "liq": sum(1 for x in P if x["liq"]), "worst": round(min((x["roe"] for x in P), default=0) * 100, 1)}
+            row = {"trade": tf30.tstats(P), "liq": sum(1 for x in P if x["liq"]), "worst": round(min((x["roe"] for x in P), default=0) * 100, 1),
+                   "best": round(max((x["roe"] for x in P), default=0) * 100, 1),
+                   "avg_win": round(float(np.mean([x["roe"] for x in P if x["roe"] > 0] or [0])) * 100, 2),
+                   "avg_loss": round(float(np.mean([x["roe"] for x in P if x["roe"] <= 0] or [0])) * 100, 2)}
             for name, frac, mp in (("%7.5×6", 0.075, 6), ("%10×5", 0.10, 5)):
                 row[name] = {k: tf30.replay(v, start=300.0, frac=frac, max_pos=mp) for k, v in
                              (("eğitim", [x for x in P if x["t"] < split]), ("TEST", [x for x in P if x["t"] >= split]), ("tüm yıl", P))}
@@ -387,12 +439,13 @@ def to_md(r):
         for m in r["combo"][ks[0]]["aylar"]:
             L.append(f"| {m} | " + " | ".join(f"%{r['combo'][k]['aylar'].get(m, 0):+}" for k in ks) + " |")
     if r.get("nostop"):
-        L += ["", "## Stop genişliği (canlı bot birleşimi, 3x izole, 300$; geniş stoplarda TP1 sonrası stop girişe çekilir)", "",
-              "| Senaryo | İşlem bazında | Tasfiye | En kötü işlem (marjin %) | %7.5×6 tüm yıl | %10×5 tüm yıl | %10×5 TEST |", "|---|---|---|---|---|---|---|"]
+        L += ["", "## Çıkış yöntemleri (canlı bot birleşimi, 3x izole = 2x × %15, 300$)", "",
+              "| Senaryo | İşlem bazında | Ort kazanan / kaybeden (marjin %) | En iyi işlem | %10×5 tüm yıl | %10×5 TEST | Eksi ay |", "|---|---|---|---|---|---|---|"]
         for k, v in r["nostop"].items():
-            a, b = v["%7.5×6"]["tüm yıl"], v["%10×5"]["tüm yıl"]
-            L.append(f"| {k} | {tf30.fs2(v['trade'])} | {v['liq']} | %{v['worst']} | %{a['ret']:+} (düşüş %{a['mdd']}) | %{b['ret']:+} (düşüş %{b['mdd']}) | "
-                     f"%{v['%10×5']['TEST']['ret']:+} (düşüş %{v['%10×5']['TEST']['mdd']}) |")
+            b = v["%10×5"]["tüm yıl"]
+            neg = sum(1 for x in v["%10×5"]["aylar"].values() if x < 0)
+            L.append(f"| {k} | {tf30.fs2(v['trade'])} | %{v['avg_win']} / %{v['avg_loss']} | %{v['best']} | %{b['ret']:+} (düşüş %{b['mdd']}) | "
+                     f"%{v['%10×5']['TEST']['ret']:+} (düşüş %{v['%10×5']['TEST']['mdd']}) | {neg}/{len(v['%10×5']['aylar'])} |")
         ks = list(r["nostop"])
         L += ["", "Aylara göre (%10×5, her ay 300$ ile):", "", "| Ay | " + " | ".join(ks) + " |", "|---" * (len(ks) + 1) + "|"]
         for m in r["nostop"][ks[0]]["%10×5"]["aylar"]:

@@ -308,6 +308,22 @@ def analyze(data1h, daily, rank, today):
                 row[name]["aylar"] = {m: tf30.replay(v, start=300.0, frac=frac, max_pos=mp)["ret"] for m, v in sorted(mon.items())}
             ns[lab] = row
         rep["nostop"] = ns
+        # Kaldıraç karşılaştırması (aynı stop/hedef): getiri kaldıraçla doğrusal → roe × (k/3)
+        base = mkpool()
+        levs = {}
+        for k in (2, 3):
+            P = [dict(x, roe=x["roe"] * k / 3) for x in base]
+            row = {}
+            for name, frac, mp in (("%7.5×6", 0.075, 6), ("%10×5", 0.10, 5), ("%15×5", 0.15, 5), ("%20×5", 0.20, 5)):
+                row[name] = {"tüm yıl": tf30.replay(P, start=300.0, frac=frac, max_pos=mp),
+                             "TEST": tf30.replay([x for x in P if x["t"] >= split], start=300.0, frac=frac, max_pos=mp)}
+                mon = {}
+                for x in P:
+                    mon.setdefault(datetime.fromtimestamp(x["t"] / 1000, timezone.utc).strftime("%Y-%m"), []).append(x)
+                row[name]["eksi_ay"] = sum(1 for v in mon.values() if tf30.replay(v, start=300.0, frac=frac, max_pos=mp)["ret"] < 0)
+                row[name]["ay"] = len(mon)
+            levs[f"{k}x"] = row
+        rep["levs"] = levs
         combo = {}
         for name, frac, mp in (("%7.5 · en çok 6", 0.075, 6), ("%15 · en çok 4", 0.15, 4), ("%15 · en çok 6", 0.15, 6), ("%10 · en çok 5", 0.10, 5)):
             parts = {"eğitim": [x for x in pool if x["t"] < split], "TEST": [x for x in pool if x["t"] >= split], "tüm yıl": pool}
@@ -381,6 +397,12 @@ def to_md(r):
         L += ["", "Aylara göre (%10×5, her ay 300$ ile):", "", "| Ay | " + " | ".join(ks) + " |", "|---" * (len(ks) + 1) + "|"]
         for m in r["nostop"][ks[0]]["%10×5"]["aylar"]:
             L.append(f"| {m} | " + " | ".join(f"%{r['nostop'][k]['%10×5']['aylar'].get(m, 0):+}" for k in ks) + " |")
+    if r.get("levs"):
+        L += ["", "## Kaldıraç: 2x vs 3x (şu anki stop ve hedefler, 300$)", "", "| Kaldıraç · marjin | 1 yıl | En büyük düşüş | TEST dönemi | Eksi ay |", "|---|---|---|---|---|"]
+        for k, row in r["levs"].items():
+            for name, v in row.items():
+                a = v["tüm yıl"]
+                L.append(f"| {k} · {name} | %{a['ret']:+} → {a['final']}$ | %{a['mdd']} | %{v['TEST']['ret']:+} | {v['eksi_ay']}/{v['ay']} |")
     L += ["", "## Ortak göstergeler (kazanan vs kaybeden, d = etki büyüklüğü; eğitim/TEST, her zaman diliminde)", "",
           "Pozitif d: kazananlarda daha yüksek. Değerler trend yönüne göre işaretli (short'ta RSI = 100−RSI vb.).", "",
           "| Gösterge | Tüm dilimlerde aynı yön | en küçük |d| | " + " | ".join(r["tfs"]) + " |", "|---|---|---|" + "---|" * len(r["tfs"])]

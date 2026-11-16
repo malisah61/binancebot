@@ -90,6 +90,53 @@ def trend(c):
     return e20, e50, e200, up, dn
 
 
+LIVE = {"4h": "f50", "3h": "f50", "2h": "ema20"}
+LEV = 3
+
+
+def sim_nostop(o, h, l, c, i, d, entry, mode, tp_risk, hold, cost, be=False, wait=6):
+    """Stopsuz: yalnız TP1 (yarısı, 1.5R) / TP2 (3R), süre sonu veya tasfiye (3x izole: ~%32.8 ters hareket → marjin biter).
+    be=True: TP1 sonrası kalan yarı için girişte koruma. R mesafesi stoplu sürümle aynı (hedefler aynı yerde)."""
+    n = len(c)
+    if mode == "lim":
+        j0 = None
+        for j in range(i + 1, min(n, i + 1 + wait)):
+            if (d == 1 and l[j] <= entry) or (d == -1 and h[j] >= entry):
+                j0 = j
+                if (d == 1 and o[j] < entry) or (d == -1 and o[j] > entry):
+                    entry = o[j]
+                break
+        if j0 is None:
+            return None
+        start = j0
+    else:
+        start = i + 1
+    liq = entry * (1 - d * (1 / LEV - 0.005))
+    t1, t2 = entry + d * 1.5 * tp_risk, entry + d * 3 * tp_risk
+    got, left, tp1, mae = 0.0, 1.0, False, 0.0
+    end = min(n - 1, start + hold)
+    k = start
+    while k <= end:
+        adv, fav = (l[k], h[k]) if d == 1 else (h[k], l[k])
+        mae = max(mae, d * (entry - adv) / entry)
+        if (d == 1 and adv <= liq) or (d == -1 and adv >= liq):
+            return {"roe": -1.0 + got * LEV, "liq": True, "start": start, "bars": k - start + 1, "mae": mae}
+        if tp1 and be and ((d == 1 and adv <= entry) or (d == -1 and adv >= entry)):
+            left = 0
+            break
+        if not tp1 and ((d == 1 and fav >= t1) or (d == -1 and fav <= t1)):
+            got += 0.5 * d * (t1 - entry) / entry
+            left, tp1 = 0.5, True
+        if tp1 and ((d == 1 and fav >= t2) or (d == -1 and fav <= t2)):
+            got += left * d * (t2 - entry) / entry
+            left = 0
+            break
+        k += 1
+    if left > 0:
+        got += left * d * (c[min(k, end)] - entry) / entry
+    return {"roe": LEV * (got - cost), "liq": False, "start": start, "bars": min(k, end) - start + 1, "mae": mae}
+
+
 def coin_trades(s, df, tf, btc_tr, tier, split):
     o, h, l, c = (df[q].values.astype(float) for q in "ohlc")
     t = df["t"].values
@@ -142,6 +189,13 @@ def coin_trades(s, df, tf, btc_tr, tier, split):
                 tr = {"sym": s, "t": int(t[min(r["start"], n - 1)]), "t_exit": int(t[min(r["start"] + r["bars"] - 1, n - 1)]),
                       "dir": d, "R": r["R"], "roe": 3 * r["R"] * r["risk"], "liq": False, "btc_ok": bool(bt[i] == d), "tier": tier}
                 out.setdefault(ent, []).append(tr)
+                if LIVE.get(tf) == ent and mode == "lim":
+                    for tag, be in (("nostop", False), ("nostopbe", True)):
+                        q = sim_nostop(o, h, l, c, j, d, lv, mode, abs(lv - stop), HOLD[tf], cost, be=be)
+                        if q:
+                            out.setdefault(f"{ent}_{tag}", []).append({"sym": s, "t": int(t[min(q["start"], n - 1)]),
+                                "t_exit": int(t[min(q["start"] + q["bars"] - 1, n - 1)]), "dir": d, "R": q["roe"] / 3, "roe": q["roe"],
+                                "liq": q["liq"], "btc_ok": bool(bt[i] == d), "tier": tier, "mae": q["mae"]})
                 if ent == "f38":
                     row = {q: float(R[q].iloc[i]) if q in R and R[q].iloc[i] == R[q].iloc[i] else np.nan for q in FEATS if q.startswith("f_")}
                     if "f_htf" in row and row["f_htf"] == row["f_htf"]:
@@ -204,6 +258,8 @@ def analyze(data1h, daily, rank, today):
             samples += smp
         res = {}
         for ent, T in allt.items():
+            if "_nostop" in ent:
+                continue
             for flt in ("tümü", "btc"):
                 TT = [x for x in T if flt == "tümü" or x["btc_ok"]]
                 tr, te = [x for x in TT if x["t"] < sp], [x for x in TT if x["t"] >= sp]
@@ -219,13 +275,28 @@ def analyze(data1h, daily, rank, today):
         adopted = bool(pick and te.get("n", 0) >= 40 and te["avg_roe"] > 0 and (te.get("pf") or 0) > 1.05 and res[pick]["train"]["avg_roe"] > 0)
         rep["tfs"][tf] = {"rules": res, "pick": pick, "adopted": adopted, "feat": cohen(pd.DataFrame(samples)) if samples else {}, "split": sp}
     # Canlı bot birleşimi: 4s %50 + 3s %50 + 2s EMA20, BTC aynı trendde, hacimde ilk 150 coin, coin başına tek işlem
-    LIVE = {"4h": "f50", "3h": "f50", "2h": "ema20"}
     tr_all = rep.pop("_trades", {})
     if all(tf in tr_all for tf in LIVE):
-        pool = []
-        for tf, ent in LIVE.items():
-            pool += [dict(x, tf=tf) for x in tr_all[tf].get(ent, []) if x["btc_ok"] and x["tier"] in ("büyük", "orta")]
-        pool.sort(key=lambda x: (x["t"], {"4h": 0, "3h": 1, "2h": 2}[x["tf"]]))
+        def mkpool(suffix=""):
+            P = []
+            for tf, ent in LIVE.items():
+                P += [dict(x, tf=tf) for x in tr_all[tf].get(ent + suffix, []) if x["btc_ok"] and x["tier"] in ("büyük", "orta")]
+            P.sort(key=lambda x: (x["t"], {"4h": 0, "3h": 1, "2h": 2}[x["tf"]]))
+            return P
+        pool = mkpool()
+        ns = {}
+        for lab, suf in (("Stoplu (şu anki)", ""), ("Stopsuz", "_nostop"), ("Stopsuz + TP1 sonrası girişte koruma", "_nostopbe")):
+            P = mkpool(suf)
+            row = {"trade": tf30.tstats(P), "liq": sum(1 for x in P if x["liq"]), "worst": round(min((x["roe"] for x in P), default=0) * 100, 1)}
+            for name, frac, mp in (("%7.5×6", 0.075, 6), ("%10×5", 0.10, 5)):
+                row[name] = {k: tf30.replay(v, start=300.0, frac=frac, max_pos=mp) for k, v in
+                             (("eğitim", [x for x in P if x["t"] < split]), ("TEST", [x for x in P if x["t"] >= split]), ("tüm yıl", P))}
+                mon = {}
+                for x in P:
+                    mon.setdefault(datetime.fromtimestamp(x["t"] / 1000, timezone.utc).strftime("%Y-%m"), []).append(x)
+                row[name]["aylar"] = {m: tf30.replay(v, start=300.0, frac=frac, max_pos=mp)["ret"] for m, v in sorted(mon.items())}
+            ns[lab] = row
+        rep["nostop"] = ns
         combo = {}
         for name, frac, mp in (("%7.5 · en çok 6", 0.075, 6), ("%15 · en çok 4", 0.15, 4), ("%15 · en çok 6", 0.15, 6), ("%10 · en çok 5", 0.10, 5)):
             parts = {"eğitim": [x for x in pool if x["t"] < split], "TEST": [x for x in pool if x["t"] >= split], "tüm yıl": pool}
@@ -288,6 +359,17 @@ def to_md(r):
         L += ["", "Aylara göre getiri (her ay 300$ ile ayrı başlar):", "", "| Ay | " + " | ".join(ks) + " |", "|---" * (len(ks) + 1) + "|"]
         for m in r["combo"][ks[0]]["aylar"]:
             L.append(f"| {m} | " + " | ".join(f"%{r['combo'][k]['aylar'].get(m, 0):+}" for k in ks) + " |")
+    if r.get("nostop"):
+        L += ["", "## Stoplu vs stopsuz (canlı bot birleşimi, 3x izole, 300$)", "",
+              "| Senaryo | İşlem bazında | Tasfiye | En kötü işlem (marjin %) | %7.5×6 tüm yıl | %10×5 tüm yıl | %10×5 TEST |", "|---|---|---|---|---|---|---|"]
+        for k, v in r["nostop"].items():
+            a, b = v["%7.5×6"]["tüm yıl"], v["%10×5"]["tüm yıl"]
+            L.append(f"| {k} | {tf30.fs2(v['trade'])} | {v['liq']} | %{v['worst']} | %{a['ret']:+} (düşüş %{a['mdd']}) | %{b['ret']:+} (düşüş %{b['mdd']}) | "
+                     f"%{v['%10×5']['TEST']['ret']:+} (düşüş %{v['%10×5']['TEST']['mdd']}) |")
+        ks = list(r["nostop"])
+        L += ["", "Aylara göre (%10×5, her ay 300$ ile):", "", "| Ay | " + " | ".join(ks) + " |", "|---" * (len(ks) + 1) + "|"]
+        for m in r["nostop"][ks[0]]["%10×5"]["aylar"]:
+            L.append(f"| {m} | " + " | ".join(f"%{r['nostop'][k]['%10×5']['aylar'].get(m, 0):+}" for k in ks) + " |")
     L += ["", "## Ortak göstergeler (kazanan vs kaybeden, d = etki büyüklüğü; eğitim/TEST, her zaman diliminde)", "",
           "Pozitif d: kazananlarda daha yüksek. Değerler trend yönüne göre işaretli (short'ta RSI = 100−RSI vb.).", "",
           "| Gösterge | Tüm dilimlerde aynı yön | en küçük |d| | " + " | ".join(r["tfs"]) + " |", "|---|---|---|" + "---|" * len(r["tfs"])]

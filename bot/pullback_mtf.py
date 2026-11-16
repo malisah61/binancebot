@@ -94,7 +94,7 @@ LIVE = {"4h": "f50", "3h": "f50", "2h": "ema20"}
 LEV = 3
 
 
-def sim_nostop(o, h, l, c, i, d, entry, mode, tp_risk, hold, cost, be=False, wait=6):
+def sim_nostop(o, h, l, c, i, d, entry, mode, tp_risk, hold, cost, be=False, wait=6, stop=None):
     """Stopsuz: yalnız TP1 (yarısı, 1.5R) / TP2 (3R), süre sonu veya tasfiye (3x izole: ~%32.8 ters hareket → marjin biter).
     be=True: TP1 sonrası kalan yarı için girişte koruma. R mesafesi stoplu sürümle aynı (hedefler aynı yerde)."""
     n = len(c)
@@ -119,6 +119,10 @@ def sim_nostop(o, h, l, c, i, d, entry, mode, tp_risk, hold, cost, be=False, wai
     while k <= end:
         adv, fav = (l[k], h[k]) if d == 1 else (h[k], l[k])
         mae = max(mae, d * (entry - adv) / entry)
+        if stop is not None and ((d == 1 and adv <= stop) or (d == -1 and adv >= stop)) and ((d == 1 and stop > liq) or (d == -1 and stop < liq)):
+            px = o[k] if ((d == 1 and o[k] < stop) or (d == -1 and o[k] > stop)) and k > start else stop
+            got += left * d * (px - entry) / entry
+            return {"roe": LEV * (got - cost), "liq": False, "start": start, "bars": k - start + 1, "mae": mae}
         if (d == 1 and adv <= liq) or (d == -1 and adv >= liq):
             return {"roe": -1.0 + got * LEV, "liq": True, "start": start, "bars": k - start + 1, "mae": mae}
         if tp1 and be and ((d == 1 and adv <= entry) or (d == -1 and adv >= entry)):
@@ -190,8 +194,12 @@ def coin_trades(s, df, tf, btc_tr, tier, split):
                       "dir": d, "R": r["R"], "roe": 3 * r["R"] * r["risk"], "liq": False, "btc_ok": bool(bt[i] == d), "tier": tier}
                 out.setdefault(ent, []).append(tr)
                 if LIVE.get(tf) == ent and mode == "lim":
-                    for tag, be in (("nostop", False), ("nostopbe", True)):
-                        q = sim_nostop(o, h, l, c, j, d, lv, mode, abs(lv - stop), HOLD[tf], cost, be=be)
+                    r0 = abs(lv - stop)
+                    variants = [("nostop", False, None, r0)]
+                    for m in (1.5, 2.0, 3.0):
+                        variants += [(f"w{m}s", True, lv - d * m * r0, r0), (f"w{m}x", True, lv - d * m * r0, m * r0)]
+                    for tag, be, st_, tpr in variants:
+                        q = sim_nostop(o, h, l, c, j, d, lv, mode, tpr, HOLD[tf], cost, be=be, stop=st_)
                         if q:
                             out.setdefault(f"{ent}_{tag}", []).append({"sym": s, "t": int(t[min(q["start"], n - 1)]),
                                 "t_exit": int(t[min(q["start"] + q["bars"] - 1, n - 1)]), "dir": d, "R": q["roe"] / 3, "roe": q["roe"],
@@ -258,7 +266,7 @@ def analyze(data1h, daily, rank, today):
             samples += smp
         res = {}
         for ent, T in allt.items():
-            if "_nostop" in ent:
+            if ent not in ENTRIES:
                 continue
             for flt in ("tümü", "btc"):
                 TT = [x for x in T if flt == "tümü" or x["btc_ok"]]
@@ -285,7 +293,10 @@ def analyze(data1h, daily, rank, today):
             return P
         pool = mkpool()
         ns = {}
-        for lab, suf in (("Stoplu (şu anki)", ""), ("Stopsuz", "_nostop"), ("Stopsuz + TP1 sonrası girişte koruma", "_nostopbe")):
+        labs = [("Stoplu (şu anki)", ""), ("Stopsuz", "_nostop")]
+        for m in (1.5, 2.0, 3.0):
+            labs += [(f"Stop {m:g}× geniş, hedefler aynı", f"_w{m}s"), (f"Stop {m:g}× geniş, hedefler de {m:g}×", f"_w{m}x")]
+        for lab, suf in labs:
             P = mkpool(suf)
             row = {"trade": tf30.tstats(P), "liq": sum(1 for x in P if x["liq"]), "worst": round(min((x["roe"] for x in P), default=0) * 100, 1)}
             for name, frac, mp in (("%7.5×6", 0.075, 6), ("%10×5", 0.10, 5)):
@@ -360,7 +371,7 @@ def to_md(r):
         for m in r["combo"][ks[0]]["aylar"]:
             L.append(f"| {m} | " + " | ".join(f"%{r['combo'][k]['aylar'].get(m, 0):+}" for k in ks) + " |")
     if r.get("nostop"):
-        L += ["", "## Stoplu vs stopsuz (canlı bot birleşimi, 3x izole, 300$)", "",
+        L += ["", "## Stop genişliği (canlı bot birleşimi, 3x izole, 300$; geniş stoplarda TP1 sonrası stop girişe çekilir)", "",
               "| Senaryo | İşlem bazında | Tasfiye | En kötü işlem (marjin %) | %7.5×6 tüm yıl | %10×5 tüm yıl | %10×5 TEST |", "|---|---|---|---|---|---|---|"]
         for k, v in r["nostop"].items():
             a, b = v["%7.5×6"]["tüm yıl"], v["%10×5"]["tüm yıl"]

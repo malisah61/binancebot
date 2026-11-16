@@ -1,5 +1,5 @@
 {
- "time": 1794786961786,
+ "time": 1794787234775,
  "tfs": {
   "15m": {
    "weights": {
@@ -14,9 +14,9 @@
    "long_th": 58,
    "short_th": 42.99,
    "learned": false,
-   "test_avg_R": 0.005,
-   "test_win": 49.6,
-   "baseline_test_avg_R": 0.017,
+   "test_avg_R": 0.01,
+   "test_win": 49.7,
+   "baseline_test_avg_R": 0.023,
    "live_weights": {
     "trend": 20,
     "momentum": 18,
@@ -25,86 +25,44 @@
     "vwap": 5
    },
    "strategy": {
-    "type": "rules",
-    "lt": 55,
-    "st": 45,
-    "conds": [
-     [
-      "z",
-      "<=",
-      -0.522745147067861
-     ],
-     [
-      "atrp",
-      ">=",
-      0.48163840698000976
-     ],
-     [
-      "smc",
-      "<=",
-      0.0
-     ]
-    ],
+    "type": "trend",
+    "lt": 58,
+    "st": 42.99,
+    "max_ext": null,
     "htf": null,
-    "sl": 1.0,
+    "sl": 1.5,
     "tp1": 1.5,
-    "tp2": 2.5,
+    "tp2": 3.0,
     "max_new": 3
    },
-   "strategy_name": "Kazanan ortak noktaları kuralı (skor ≥55 / ≤45 VE Z-Score (yön) ≤ -0.52 VE ATR % ≥ 0.48 VE FVG+Likidite (yön) ≤ 0.00), SL1.0/TP1.5-2.5",
+   "strategy_name": "Trend takibi (skor ≥58 / ≤43), SL1.5/TP1.5-3.0",
    "strategy_adopted": false,
-   "strategy_mode": "ileri test",
+   "strategy_mode": "varsayılan",
    "strategy_test": {
     "5": {
-     "n": 1040,
-     "win": 38.9,
-     "avg_roe": -0.48,
-     "med_roe": -3.35,
-     "pf": 0.84,
-     "avg_R": -0.01,
-     "net_100": -500.0,
-     "max_dd_100": 608.0,
+     "n": 2907,
+     "win": 48.3,
+     "avg_roe": -0.49,
+     "med_roe": -1.3,
+     "pf": 0.85,
+     "avg_R": -0.005,
+     "net_100": -1419.0,
+     "max_dd_100": 1866.0,
      "liq": 0,
-     "avg_bars": 7.8,
+     "avg_bars": 9.3,
      "reasons": {
-      "TP2": 257,
-      "TP1→BE": 146,
-      "SL": 635,
-      "SÜRE": 2
+      "TP2": 751,
+      "TP1→BE": 669,
+      "SL": 1473,
+      "SÜRE": 14
      },
      "long": {
-      "n": 422,
-      "win": 34.6
+      "n": 1120,
+      "win": 46.3
      },
      "short": {
-      "n": 618,
-      "win": 41.9
-     }
-    },
-    "10": {
-     "n": 1040,
-     "win": 38.9,
-     "avg_roe": -0.96,
-     "med_roe": -6.7,
-     "pf": 0.84,
-     "avg_R": -0.01,
-     "net_100": -999.0,
-     "max_dd_100": 1217.0,
-     "liq": 0,
-     "avg_bars": 7.8,
-     "reasons": {
-      "TP2": 257,
-      "TP1→BE": 146,
-      "SL": 635,
-      "SÜRE": 2
-     },
-     "long": {
-      "n": 422,
-      "win": 34.6
-     },
-     "short": {
-      "n": 618,
-      "win": 41.9
+      "n": 1787,
+      "win": 49.6
      }
     }
    }
@@ -122,9 +80,9 @@
    "long_th": 58,
    "short_th": 42.99,
    "learned": false,
-   "test_avg_R": -0.022,
-   "test_win": 48.0,
-   "baseline_test_avg_R": -0.003,
+   "test_avg_R": 0.007,
+   "test_win": 48.7,
+   "baseline_test_avg_R": 0.008,
    "live_weights": {
     "trend": 20,
     "momentum": 18,
@@ -149,60 +107,60 @@
     "max_new": 3
    },
    "strategy_name": "Geri çekilmede limit giriş (skor ≥58 / ≤42, dip-tepe aralığının en fazla %70'inde, 0.382 Fibonacci geri çekilmesine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.5R / 3.0R)",
-   "strategy_adopted": false,
-   "strategy_mode": "ileri test",
+   "strategy_adopted": true,
+   "strategy_mode": "doğrulandı",
    "strategy_test": {
     "5": {
-     "n": 668,
-     "win": 42.4,
-     "avg_roe": 0.07,
-     "med_roe": -3.9,
-     "pf": 1.01,
-     "avg_R": 0.048,
-     "net_100": 46.0,
+     "n": 647,
+     "win": 43.0,
+     "avg_roe": 0.34,
+     "med_roe": -3.59,
+     "pf": 1.06,
+     "avg_R": 0.066,
+     "net_100": 217.0,
      "max_dd_100": 1236.0,
      "liq": 0,
-     "avg_bars": 29.5,
+     "avg_bars": 29.4,
      "reasons": {
-      "SL": 373,
-      "TP1→BE": 121,
-      "TP2": 116,
+      "TP1→BE": 117,
+      "TP2": 115,
+      "SL": 357,
       "SÜRE": 58
      },
      "long": {
-      "n": 218,
-      "win": 31.7
+      "n": 216,
+      "win": 31.9
      },
      "short": {
-      "n": 450,
-      "win": 47.6
+      "n": 431,
+      "win": 48.5
      }
     },
     "10": {
-     "n": 671,
-     "win": 42.2,
-     "avg_roe": -0.21,
-     "med_roe": -7.86,
-     "pf": 0.98,
-     "avg_R": 0.047,
-     "net_100": -139.0,
+     "n": 650,
+     "win": 42.8,
+     "avg_roe": 0.31,
+     "med_roe": -7.34,
+     "pf": 1.03,
+     "avg_R": 0.065,
+     "net_100": 203.0,
      "max_dd_100": 2537.0,
      "liq": 7,
-     "avg_bars": 29.3,
+     "avg_bars": 29.2,
      "reasons": {
-      "SL": 370,
-      "TP1→BE": 121,
-      "TP2": 116,
+      "TP1→BE": 117,
+      "TP2": 115,
+      "SL": 354,
       "SÜRE": 57,
       "LİKİDASYON": 7
      },
      "long": {
-      "n": 221,
-      "win": 31.2
+      "n": 219,
+      "win": 31.5
      },
      "short": {
-      "n": 450,
-      "win": 47.6
+      "n": 431,
+      "win": 48.5
      }
     }
    }
@@ -220,9 +178,9 @@
    "long_th": 58,
    "short_th": 42.99,
    "learned": false,
-   "test_avg_R": 0.022,
-   "test_win": 49.5,
-   "baseline_test_avg_R": 0.028,
+   "test_avg_R": 0.017,
+   "test_win": 49.1,
+   "baseline_test_avg_R": 0.036,
    "live_weights": {
     "trend": 20,
     "momentum": 18,
@@ -246,29 +204,29 @@
    "strategy_mode": "varsayılan",
    "strategy_test": {
     "5": {
-     "n": 759,
-     "win": 52.4,
-     "avg_roe": 0.42,
-     "med_roe": 1.67,
-     "pf": 1.08,
-     "avg_R": 0.068,
-     "net_100": 317.0,
-     "max_dd_100": 818.0,
+     "n": 739,
+     "win": 52.6,
+     "avg_roe": 0.4,
+     "med_roe": 1.97,
+     "pf": 1.07,
+     "avg_R": 0.072,
+     "net_100": 294.0,
+     "max_dd_100": 820.0,
      "liq": 0,
      "avg_bars": 10.3,
      "reasons": {
-      "TP1→BE": 179,
-      "SL": 360,
-      "TP2": 211,
+      "SL": 349,
+      "TP2": 206,
+      "TP1→BE": 175,
       "SÜRE": 9
      },
      "long": {
-      "n": 238,
-      "win": 45.0
+      "n": 230,
+      "win": 44.8
      },
      "short": {
-      "n": 521,
-      "win": 55.9
+      "n": 509,
+      "win": 56.2
      }
     }
    }
@@ -286,9 +244,9 @@
    "long_th": 58,
    "short_th": 42.99,
    "learned": false,
-   "test_avg_R": 0.056,
-   "test_win": 52.1,
-   "baseline_test_avg_R": 0.102,
+   "test_avg_R": 0.044,
+   "test_win": 51.1,
+   "baseline_test_avg_R": 0.124,
    "live_weights": {
     "trend": 20,
     "momentum": 18,
@@ -312,54 +270,54 @@
    "strategy_mode": "doğrulandı",
    "strategy_test": {
     "5": {
-     "n": 219,
-     "win": 45.2,
-     "avg_roe": 1.14,
-     "med_roe": -6.35,
-     "pf": 1.13,
-     "avg_R": 0.162,
-     "net_100": 250.0,
-     "max_dd_100": 577.0,
+     "n": 214,
+     "win": 46.3,
+     "avg_roe": 1.49,
+     "med_roe": -6.08,
+     "pf": 1.18,
+     "avg_R": 0.183,
+     "net_100": 318.0,
+     "max_dd_100": 497.0,
      "liq": 0,
-     "avg_bars": 7.1,
+     "avg_bars": 7.0,
      "reasons": {
-      "TP1→BE": 34,
-      "SL": 120,
-      "TP2": 65
+      "TP1→BE": 35,
+      "SL": 115,
+      "TP2": 64
      },
      "long": {
-      "n": 52,
-      "win": 17.3
+      "n": 51,
+      "win": 17.6
      },
      "short": {
-      "n": 167,
-      "win": 53.9
+      "n": 163,
+      "win": 55.2
      }
     },
     "10": {
-     "n": 219,
-     "win": 45.2,
-     "avg_roe": 2.43,
-     "med_roe": -12.71,
-     "pf": 1.14,
-     "avg_R": 0.164,
-     "net_100": 532.0,
-     "max_dd_100": 1121.0,
+     "n": 214,
+     "win": 46.3,
+     "avg_roe": 3.12,
+     "med_roe": -12.16,
+     "pf": 1.19,
+     "avg_R": 0.185,
+     "net_100": 669.0,
+     "max_dd_100": 962.0,
      "liq": 2,
-     "avg_bars": 7.1,
+     "avg_bars": 7.0,
      "reasons": {
-      "TP1→BE": 34,
-      "SL": 118,
-      "TP2": 65,
+      "TP1→BE": 35,
+      "SL": 113,
+      "TP2": 64,
       "LİKİDASYON": 2
      },
      "long": {
-      "n": 52,
-      "win": 17.3
+      "n": 51,
+      "win": 17.6
      },
      "short": {
-      "n": 167,
-      "win": 53.9
+      "n": 163,
+      "win": 55.2
      }
     }
    }

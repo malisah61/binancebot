@@ -488,7 +488,10 @@ def run(raw, today, t0=None):
         ok = bool(win and win["test"]["5"].get("n", 0) >= 40 and (win["test"]["5"].get("avg_R") or -9) > 0
                   and (win["test"]["5"].get("pf") or 0) > 1.05 and (win["test"]["5"].get("avg_R") or -9) > (bl_test.get("avg_R") or -9)
                   and win["train"]["avg_R"] > 0)
-        out["contest"] = {"tested": len(res), "top": top, "live_baseline_test": bl_test, "adopted": ok}
+        out["contest"] = {"tested": len(res), "top": top, "live_baseline_test": bl_test, "adopted": ok,
+                          # tüm adayların yalnız EĞİTİM sonucu (sıra = eğitim hedefi); gece raporunda hipotezlerin yerini görmek için
+                          "train_rank": [{"name": v5.strategy_name(stg), "n": stt.get("n"), "avg_R": stt.get("avg_R"), "pf": stt.get("pf"),
+                                          "win": stt.get("win")} for _, stg, stt in res]}
         model["tfs"][tf]["live_weights"] = LIVE_W
         apply_contest(model["tfs"][tf], out["contest"], base_live)
         print(f"{tf} yarışma: {len(res)} strateji, kazanan {win['name'] if win else '-'} test {win['test']['5'] if win else '-'} -> {'BENİMSENDİ' if ok else 'reddedildi'}")

@@ -6,6 +6,7 @@ Type=oneshot
 User=kripto
 EnvironmentFile=/etc/kripto.env
 Environment=GERCEK_MODE=demo
+Environment=DEMO_SANAL=300
 WorkingDirectory=/home/kripto/binancebot
 ExecStart=/home/kripto/venv/bin/python /home/kripto/binancebot/bot/real.py
 TimeoutStartSec=280

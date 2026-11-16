@@ -32,7 +32,7 @@ STATE = os.environ.get("GERCEK_STATE", os.path.expanduser("~/gercek.json" if MOD
 DRY = os.environ.get("GERCEK_DRY") == "1"
 LIMITS = {"lev": 2, "margin_frac": 0.15, "max_pos": 5, "daily_loss": 0.05}
 MARGIN = {"extreme": 0.15, "pullback": 0.15}           # 2x × %15 = bakiyenin %30'u pozisyon (3x × %10 ile aynı risk, tasfiye daha uzak)
-LABEL = "💰 GERÇEK" if MODE == "real" else "🧪 DEMO-sunucu"
+LABEL = "💰 GERÇEK" if MODE == "real" else ("🧪 DEMO (" + os.environ.get("DEMO_SANAL", "") + "$ sanal)" if os.environ.get("DEMO_SANAL") else "🧪 DEMO-sunucu")
 REAL_HOST = "https://fapi.binance.com"
 
 
@@ -61,6 +61,23 @@ class Real(executor.Demo):
 
 
 _pub = None
+
+
+SANAL = float(os.environ.get("DEMO_SANAL", 0) or 0) if MODE != "real" else 0.0
+
+
+class SanalDemo(executor.Demo):
+    """Demo hesapta SANAL bakiye: işlem büyüklüğü ve günlük limit, gerçek demo bakiyesi yerine
+    (başlangıç + bu ayardan sonra açılıp kapanan işlemlerin gerçekleşen kâr/zararı) üzerinden hesaplanır."""
+    ds = None
+
+    def balance(self):
+        real_eq, real_av = super().balance()
+        sv = self.ds["sanal"]
+        eq = sv["start"] + sum(x["pnl"] for x in self.ds.get("closed", []) if x.get("opened", 0) >= sv["t"])
+        used = sum(p["qty"] * p["entry"] / LIMITS["lev"] for p in self.ds.get("positions", {}).values() if p.get("opened", 0) >= sv["t"])
+        used += sum(q["qty"] * q["entry"] / LIMITS["lev"] for q in self.ds.get("pending", {}).values() if q.get("created", 0) >= sv["t"])
+        return eq, max(0.0, min(eq - used, real_av))
 
 
 def klines(R, sym, n=800):
@@ -163,9 +180,21 @@ def main():
         raise SystemExit("Gerçek hesap modülü GitHub Actions'ta çalıştırılamaz.")
     chat = os.environ.get("TELEGRAM_CHAT_ID")
     executor.CFG.update(LIMITS)
-    R = Real() if MODE == "real" else executor.Demo()
+    R = Real() if MODE == "real" else (SanalDemo() if SANAL else executor.Demo())
     ds = json.load(open(STATE)) if os.path.exists(STATE) else executor.new_state() | {"done": {}}
     ds.setdefault("done", {})
+    if isinstance(R, SanalDemo):
+        R.ds = ds
+        if (ds.get("sanal") or {}).get("start") != SANAL:          # sanal bakiyeye geçiş: eski büyük bekleyen emirleri iptal et
+            ds["sanal"] = {"start": SANAL, "t": int(time.time() * 1000)}
+            for sym, q in list(ds.get("pending", {}).items()):
+                try:
+                    R.req("DELETE", "/fapi/v1/order", {"symbol": sym, "orderId": q["orderId"]})
+                except executor.BinanceError:
+                    pass
+            ds["day"] = None
+            telegram.send(os.environ.get("TELEGRAM_CHAT_ID"), f"🧪 DEMO-sunucu artık {SANAL:.0f}$ sanal bakiye ile işlem açacak "
+                                                               f"(eski bekleyen emirler iptal edildi; açık pozisyonlar kendi stop/hedefleriyle kapanır, sanal hesaba sayılmaz).")
     ctl = {}
     try:
         ctl = json.load(open(os.path.join(ROOT, "state", "gercek_kontrol.json")))

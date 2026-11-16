@@ -212,11 +212,31 @@ def analyze(data1h, daily, rank, today):
                                        "replay6_train": tf30.replay(tr, frac=0.075, max_pos=6), "replay6_test": tf30.replay(te, frac=0.075, max_pos=6),
                                        "tiers": {tr_: {"train": tf30.tstats([x for x in tr if x["tier"] == tr_]), "test": tf30.tstats([x for x in te if x["tier"] == tr_])}
                                                  for tr_ in ("büyük", "orta", "küçük")}}
+        rep.setdefault("_trades", {})[tf] = allt
         cand = [k for k, v in res.items() if v["train"].get("n", 0) >= 60]
         pick = max(cand, key=lambda k: res[k]["train"]["avg_roe"]) if cand else None
         te = res[pick]["test"] if pick else {}
         adopted = bool(pick and te.get("n", 0) >= 40 and te["avg_roe"] > 0 and (te.get("pf") or 0) > 1.05 and res[pick]["train"]["avg_roe"] > 0)
         rep["tfs"][tf] = {"rules": res, "pick": pick, "adopted": adopted, "feat": cohen(pd.DataFrame(samples)) if samples else {}, "split": sp}
+    # Canlı bot birleşimi: 4s %50 + 3s %50 + 2s EMA20, BTC aynı trendde, hacimde ilk 150 coin, coin başına tek işlem
+    LIVE = {"4h": "f50", "3h": "f50", "2h": "ema20"}
+    tr_all = rep.pop("_trades", {})
+    if all(tf in tr_all for tf in LIVE):
+        pool = []
+        for tf, ent in LIVE.items():
+            pool += [dict(x, tf=tf) for x in tr_all[tf].get(ent, []) if x["btc_ok"] and x["tier"] in ("büyük", "orta")]
+        pool.sort(key=lambda x: (x["t"], {"4h": 0, "3h": 1, "2h": 2}[x["tf"]]))
+        combo = {}
+        for name, frac, mp in (("%7.5 · en çok 6", 0.075, 6), ("%15 · en çok 4", 0.15, 4), ("%15 · en çok 6", 0.15, 6), ("%10 · en çok 5", 0.10, 5)):
+            parts = {"eğitim": [x for x in pool if x["t"] < split], "TEST": [x for x in pool if x["t"] >= split], "tüm yıl": pool}
+            row = {k: tf30.replay(v, start=300.0, frac=frac, max_pos=mp) for k, v in parts.items()}
+            months = {}
+            for x in pool:
+                months.setdefault(datetime.fromtimestamp(x["t"] / 1000, timezone.utc).strftime("%Y-%m"), []).append(x)
+            row["aylar"] = {m: tf30.replay(v, start=300.0, frac=frac, max_pos=mp)["ret"] for m, v in sorted(months.items())}
+            combo[name] = row
+        rep["combo"] = combo
+        rep["combo_n"] = {"eğitim": sum(x["t"] < split for x in pool), "TEST": sum(x["t"] >= split for x in pool), "gün": round((today.timestamp() * 1000 - start) / 86400000)}
     common = []
     for q, nm in FEATS.items():
         ds = [(tf, v["feat"][q]) for tf, v in rep["tfs"].items() if q in v["feat"]]
@@ -256,6 +276,18 @@ def to_md(r):
             L.append(f"| {x['desc']} | " + " | ".join(tc) + f" | %{x['replay6_train']['ret']:+} / %{x['replay6_test']['ret']:+} (düşüş %{x['replay6_test']['mdd']}) |")
         if v["pick"]:
             L.append(f"\n**Eğitimde en iyi:** {v['rules'][v['pick']]['desc']} → " + ("✅ TEST'te DOĞRULANDI" if v["adopted"] else "❌ TEST'te tutmadı"))
+    if r.get("combo"):
+        n = r["combo_n"]
+        L += ["", "## Canlı botun birleşimi (4s %50 + 3s %50 + 2s EMA20, BTC aynı trendde, ilk 150 coin) — 300$ ile", "",
+              f"Sinyal sayısı: eğitim {n['eğitim']}, TEST {n['TEST']} ({n['gün']} günde).", "",
+              "| Ayar | Eğitim dönemi | TEST dönemi | Tüm yıl | Açılan işlem (yıl) |", "|---|---|---|---|---|"]
+        for k, v in r["combo"].items():
+            L.append(f"| {k} | %{v['eğitim']['ret']:+} (düşüş %{v['eğitim']['mdd']}) | %{v['TEST']['ret']:+} (düşüş %{v['TEST']['mdd']}) | "
+                     f"%{v['tüm yıl']['ret']:+} → {v['tüm yıl']['final']}$ (düşüş %{v['tüm yıl']['mdd']}) | {v['tüm yıl']['n']} |")
+        ks = list(r["combo"])
+        L += ["", "Aylara göre getiri (her ay 300$ ile ayrı başlar):", "", "| Ay | " + " | ".join(ks) + " |", "|---" * (len(ks) + 1) + "|"]
+        for m in r["combo"][ks[0]]["aylar"]:
+            L.append(f"| {m} | " + " | ".join(f"%{r['combo'][k]['aylar'].get(m, 0):+}" for k in ks) + " |")
     L += ["", "## Ortak göstergeler (kazanan vs kaybeden, d = etki büyüklüğü; eğitim/TEST, her zaman diliminde)", "",
           "Pozitif d: kazananlarda daha yüksek. Değerler trend yönüne göre işaretli (short'ta RSI = 100−RSI vb.).", "",
           "| Gösterge | Tüm dilimlerde aynı yön | en küçük |d| | " + " | ".join(r["tfs"]) + " |", "|---|---|---|" + "---|" * len(r["tfs"])]

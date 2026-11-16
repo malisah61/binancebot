@@ -6,7 +6,7 @@ Ne yapar (her 5 dakikada bir, systemd zamanlayıcısıyla):
   2) Yalnız TEST dönemini geçmiş ("doğrulandı") uç-hareket kurulumlarını arar (state/extreme.json → picks[*].adopted).
      Olay son kapanmış 1s mumda olmuşsa, kurulumun limit emrini (ör. düşüşün %38.2 tepkisine SHORT) koyar.
 
-Sınırlar (sabit): 3x kaldıraç, işlem başı marjin bakiyenin %15'i, en çok 3 açık/bekleyen işlem, günlük %5 zarar limiti,
+Sınırlar (sabit): 2x kaldıraç, işlem başı marjin bakiyenin %15'i, en çok 5 açık/bekleyen işlem, günlük %5 zarar limiti,
 izole marjin. Bakiye = Futures cüzdanına aktardığın tutar; bot bundan fazlasını kullanamaz.
 Kontrol: Telegram /gercekdur · /gercekdevam · /gercekkapat (bot-loop yazar → state/gercek_kontrol.json → sunucu çeker).
 """
@@ -30,8 +30,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODE = os.environ.get("GERCEK_MODE", "real")          # real | demo (aynı kod, demo hesapta gerçek emir)
 STATE = os.environ.get("GERCEK_STATE", os.path.expanduser("~/gercek.json" if MODE == "real" else "~/demo_sunucu.json"))
 DRY = os.environ.get("GERCEK_DRY") == "1"
-LIMITS = {"lev": 3, "margin_frac": 0.15, "max_pos": 6, "daily_loss": 0.05}
-MARGIN = {"extreme": 0.15, "pullback": 0.075}          # uç hareket %15 · geri çekilme %7.5 (en çok 6 işlem)
+LIMITS = {"lev": 2, "margin_frac": 0.15, "max_pos": 5, "daily_loss": 0.05}
+MARGIN = {"extreme": 0.15, "pullback": 0.15}           # 2x × %15 = bakiyenin %30'u pozisyon (3x × %10 ile aynı risk, tasfiye daha uzak)
 LABEL = "💰 GERÇEK" if MODE == "real" else "🧪 DEMO-sunucu"
 REAL_HOST = "https://fapi.binance.com"
 

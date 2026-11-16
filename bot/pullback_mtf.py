@@ -91,7 +91,9 @@ def trend(c):
 
 
 LIVE = {"4h": "f50", "3h": "f50", "2h": "ema20"}
-LEV = 3
+SPOT = os.environ.get("PB_SPOT") == "1"
+LEV = 1 if SPOT else 3
+SIZES = ((("%20×5", 0.20, 5), ("%33×3", 0.33, 3), ("%50×2", 0.50, 2)) if SPOT else (("%7.5×6", 0.075, 6), ("%10×5", 0.10, 5)))
 
 
 def sim_nostop(o, h, l, c, i, d, entry, mode, tp_risk, hold, cost, be=False, wait=6, stop=None):
@@ -197,11 +199,11 @@ def coin_trades(s, df, tf, btc_tr, tier, split):
     hh, ll = X.roll_max(h, 20), X.roll_min(l, 20)
     ll10, hh10 = X.roll_min(l, 10), X.roll_max(h, 10)
     hh3, ll3 = X.roll_max(h, 3), X.roll_min(l, 3)
-    cost = X.FEE + 2 * X.SLIP[tier]
+    cost = (0.0020 if SPOT else X.FEE) + 2 * X.SLIP[tier]      # spot: %0.1 alış + %0.1 satış
     tfh = v5.TF_MS[tf] / 3_600_000
     bt = np.array([btc_tr.get(x, 0) for x in t])
     out, samples = {}, []
-    for d, tr_ok in ((1, up), (-1, dn)):
+    for d, tr_ok in (((1, up),) if SPOT else ((1, up), (-1, dn))):
         fresh = (hh3 >= hh) if d == 1 else (ll3 <= ll)
         side = (c > e20) if d == 1 else (c < e20)
         setup = tr_ok & fresh & side
@@ -235,7 +237,7 @@ def coin_trades(s, df, tf, btc_tr, tier, split):
                 if not r.get("filled"):
                     continue
                 tr = {"sym": s, "t": int(t[min(r["start"], n - 1)]), "t_exit": int(t[min(r["start"] + r["bars"] - 1, n - 1)]),
-                      "dir": d, "R": r["R"], "roe": 3 * r["R"] * r["risk"], "liq": False, "btc_ok": bool(bt[i] == d), "tier": tier}
+                      "dir": d, "R": r["R"], "roe": LEV * r["R"] * r["risk"], "liq": False, "btc_ok": bool(bt[i] == d), "tier": tier}
                 out.setdefault(ent, []).append(tr)
                 if LIVE.get(tf) == ent and mode == "lim":
                     r0 = abs(lv - stop)
@@ -246,13 +248,13 @@ def coin_trades(s, df, tf, btc_tr, tier, split):
                         q = sim_trail(o, h, l, c, a, j, d, lv, stop, mode, HOLD[tf] * 3, cost, kk, tp1=tp1_)
                         if q:
                             out.setdefault(f"{ent}_{tag}", []).append({"sym": s, "t": int(t[min(q["start"], n - 1)]),
-                                "t_exit": int(t[min(q["start"] + q["bars"] - 1, n - 1)]), "dir": d, "R": q["roe"] / 3, "roe": q["roe"],
+                                "t_exit": int(t[min(q["start"] + q["bars"] - 1, n - 1)]), "dir": d, "R": q["roe"] / LEV, "roe": q["roe"],
                                 "liq": False, "btc_ok": bool(bt[i] == d), "tier": tier})
                     for tag, be, st_, tpr in variants:
                         q = sim_nostop(o, h, l, c, j, d, lv, mode, tpr, HOLD[tf], cost, be=be, stop=st_)
                         if q:
                             out.setdefault(f"{ent}_{tag}", []).append({"sym": s, "t": int(t[min(q["start"], n - 1)]),
-                                "t_exit": int(t[min(q["start"] + q["bars"] - 1, n - 1)]), "dir": d, "R": q["roe"] / 3, "roe": q["roe"],
+                                "t_exit": int(t[min(q["start"] + q["bars"] - 1, n - 1)]), "dir": d, "R": q["roe"] / LEV, "roe": q["roe"],
                                 "liq": q["liq"], "btc_ok": bool(bt[i] == d), "tier": tier, "mae": q["mae"]})
                 if ent == "f38":
                     row = {q: float(R[q].iloc[i]) if q in R and R[q].iloc[i] == R[q].iloc[i] else np.nan for q in FEATS if q.startswith("f_")}
@@ -351,7 +353,7 @@ def analyze(data1h, daily, rank, today):
                    "best": round(max((x["roe"] for x in P), default=0) * 100, 1),
                    "avg_win": round(float(np.mean([x["roe"] for x in P if x["roe"] > 0] or [0])) * 100, 2),
                    "avg_loss": round(float(np.mean([x["roe"] for x in P if x["roe"] <= 0] or [0])) * 100, 2)}
-            for name, frac, mp in (("%7.5×6", 0.075, 6), ("%10×5", 0.10, 5)):
+            for name, frac, mp in SIZES:
                 row[name] = {k: tf30.replay(v, start=300.0, frac=frac, max_pos=mp) for k, v in
                              (("eğitim", [x for x in P if x["t"] < split]), ("TEST", [x for x in P if x["t"] >= split]), ("tüm yıl", P))}
                 mon = {}
@@ -377,7 +379,8 @@ def analyze(data1h, daily, rank, today):
             levs[f"{k}x"] = row
         rep["levs"] = levs
         combo = {}
-        for name, frac, mp in (("%7.5 · en çok 6", 0.075, 6), ("%15 · en çok 4", 0.15, 4), ("%15 · en çok 6", 0.15, 6), ("%10 · en çok 5", 0.10, 5)):
+        for name, frac, mp in ((("%20 · en çok 5", 0.20, 5), ("%33 · en çok 3", 0.33, 3), ("%50 · en çok 2", 0.50, 2)) if SPOT else
+                               (("%7.5 · en çok 6", 0.075, 6), ("%15 · en çok 4", 0.15, 4), ("%15 · en çok 6", 0.15, 6), ("%10 · en çok 5", 0.10, 5))):
             parts = {"eğitim": [x for x in pool if x["t"] < split], "TEST": [x for x in pool if x["t"] >= split], "tüm yıl": pool}
             row = {k: tf30.replay(v, start=300.0, frac=frac, max_pos=mp) for k, v in parts.items()}
             months = {}
@@ -405,7 +408,7 @@ def to_md(r):
     d = datetime.fromtimestamp(r["time"] / 1000, timezone.utc) + timedelta(hours=3)
     fs = tf30.fs2
     L = [f"# Trend yönünde geri çekilmede giriş — {' / '.join(TFS)} ({d:%d.%m.%Y})", "",
-         f"{r['coins']} futures coini; saatlik dilimler: son 1 yıl{', 1 gün: son 3 yıl' if '1d' in TFS else ''}. Eğitim %70 → TEST %30. 3x, komisyon + kayma dahil.", "",
+         f"{r['coins']} {'SPOT' if SPOT else 'futures'} coini{' (yalnız long, kaldıraçsız, komisyon %0.1+%0.1)' if SPOT else ''}; saatlik dilimler: son 1 yıl{', 1 gün: son 3 yıl' if '1d' in TFS else ''}. Eğitim %70 → TEST %30. 3x, komisyon + kayma dahil.", "",
          "## Karşılaştırma (TEST dönemi, gerçek hesap kurallarıyla 1000$)", "", "| Giriş | " + " | ".join(r["tfs"]) + " |", "|---" * (len(r["tfs"]) + 1) + "|"]
     for ent in ENTRIES:
         for flt in ("tümü", "btc"):
@@ -428,7 +431,7 @@ def to_md(r):
             L.append(f"\n**Eğitimde en iyi:** {v['rules'][v['pick']]['desc']} → " + ("✅ TEST'te DOĞRULANDI" if v["adopted"] else "❌ TEST'te tutmadı"))
     if r.get("combo"):
         n = r["combo_n"]
-        L += ["", "## Canlı botun birleşimi (4s %50 + 3s %50 + 2s EMA20, BTC aynı trendde, ilk 150 coin) — 300$ ile", "",
+        L += ["", f"## Canlı botun birleşimi (4s %50 + 3s %50 + 2s EMA20, BTC aynı trendde, ilk 150 coin){' — SPOT (yalnız long, işlem başı bakiye payı)' if SPOT else ''} — 300$ ile", "",
               f"Sinyal sayısı: eğitim {n['eğitim']}, TEST {n['TEST']} ({n['gün']} günde).", "",
               "| Ayar | Eğitim dönemi | TEST dönemi | Tüm yıl | Açılan işlem (yıl) |", "|---|---|---|---|---|"]
         for k, v in r["combo"].items():
@@ -439,18 +442,20 @@ def to_md(r):
         for m in r["combo"][ks[0]]["aylar"]:
             L.append(f"| {m} | " + " | ".join(f"%{r['combo'][k]['aylar'].get(m, 0):+}" for k in ks) + " |")
     if r.get("nostop"):
-        L += ["", "## Çıkış yöntemleri (canlı bot birleşimi, 3x izole = 2x × %15, 300$)", "",
-              "| Senaryo | İşlem bazında | Ort kazanan / kaybeden (marjin %) | En iyi işlem | %10×5 tüm yıl | %10×5 TEST | Eksi ay |", "|---|---|---|---|---|---|---|"]
+        L += ["", f"## Çıkış yöntemleri (canlı bot birleşimi, {'SPOT, yalnız long, kaldıraçsız' if SPOT else '3x izole = 2x × %15'}, 300$)", "",
+              f"| Senaryo | İşlem bazında | Ort kazanan / kaybeden ({'işlem' if SPOT else 'marjin'} %) | En iyi işlem | {SIZES[1][0]} tüm yıl | {SIZES[1][0]} TEST | Eksi ay |", "|---|---|---|---|---|---|---|"]
         for k, v in r["nostop"].items():
-            b = v["%10×5"]["tüm yıl"]
-            neg = sum(1 for x in v["%10×5"]["aylar"].values() if x < 0)
+            K = SIZES[1][0]
+            b = v[K]["tüm yıl"]
+            neg = sum(1 for x in v[K]["aylar"].values() if x < 0)
             L.append(f"| {k} | {tf30.fs2(v['trade'])} | %{v['avg_win']} / %{v['avg_loss']} | %{v['best']} | %{b['ret']:+} (düşüş %{b['mdd']}) | "
-                     f"%{v['%10×5']['TEST']['ret']:+} (düşüş %{v['%10×5']['TEST']['mdd']}) | {neg}/{len(v['%10×5']['aylar'])} |")
+                     f"%{v[K]['TEST']['ret']:+} (düşüş %{v[K]['TEST']['mdd']}) | {neg}/{len(v[K]['aylar'])} |")
         ks = list(r["nostop"])
-        L += ["", "Aylara göre (%10×5, her ay 300$ ile):", "", "| Ay | " + " | ".join(ks) + " |", "|---" * (len(ks) + 1) + "|"]
-        for m in r["nostop"][ks[0]]["%10×5"]["aylar"]:
-            L.append(f"| {m} | " + " | ".join(f"%{r['nostop'][k]['%10×5']['aylar'].get(m, 0):+}" for k in ks) + " |")
-    if r.get("levs"):
+        K = SIZES[1][0]
+        L += ["", f"Aylara göre ({K}, her ay 300$ ile):", "", "| Ay | " + " | ".join(ks) + " |", "|---" * (len(ks) + 1) + "|"]
+        for m in r["nostop"][ks[0]][K]["aylar"]:
+            L.append(f"| {m} | " + " | ".join(f"%{r['nostop'][k][K]['aylar'].get(m, 0):+}" for k in ks) + " |")
+    if r.get("levs") and not SPOT:
         L += ["", "## Kaldıraç: 2x vs 3x (şu anki stop ve hedefler, 300$)", "", "| Kaldıraç · marjin | 1 yıl | En büyük düşüş | TEST dönemi | Eksi ay |", "|---|---|---|---|---|"]
         for k, row in r["levs"].items():
             for name, v in row.items():
@@ -469,16 +474,34 @@ def to_md(r):
 def main():
     t0 = time.time()
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    data, rank = X.load_all(today)
-    data = {s: v for s, v in data.items() if v[1] == "fut"}
+    if SPOT:
+        import binance
+        syms = [x["symbol"] for x in binance.top_usdt(int(os.environ["EX_COINS"]))]
+        if "BTCUSDT" not in syms:
+            syms.insert(0, "BTCUSDT")
+        per = X._download([(s_, *j) for s_ in syms for j in X.jobs(s_, today, "spot")])
+        data = {}
+        for s_ in syms:
+            r_ = research.load_coin(s_, per.get(s_, []))
+            if r_ is not None and len(r_[0]) >= 2000:
+                data[s_] = (r_[0], "spot")
+        vol = {s_: float(k[0]["qv"].tail(24 * 90).sum()) for s_, k in data.items()}
+        rank = {s_: i + 1 for i, s_ in enumerate(sorted(vol, key=vol.get, reverse=True))}
+        bc = data["BTCUSDT"][0]
+        start_c = float(bc[bc["t"] >= (today - timedelta(days=365)).timestamp() * 1000]["c"].iloc[0])
+        btc_hold = round((float(bc["c"].iloc[-1]) / start_c - 1) * 100, 1)
+    else:
+        data, rank = X.load_all(today)
+        data = {s: v for s, v in data.items() if v[1] == "fut"}
+        btc_hold = None
     daily = load_daily(list(data), today) if "1d" in TFS else {}
     print(f"{len(data)} coin 1s, {len(daily)} coin günlük ({time.time()-t0:.0f} sn)")
     r = analyze(data, daily, rank, today)
-    r.update(time=int(time.time() * 1000), coins=len(data))
-    json.dump(r, open(os.path.join(ROOT, "state", f"pullback_{'_'.join(TFS)}.json"), "w"), ensure_ascii=False, default=float)
+    r.update(time=int(time.time() * 1000), coins=len(data), btc_hold=btc_hold)
+    json.dump(r, open(os.path.join(ROOT, "state", f"pullback_{'spot_' if SPOT else ''}{'_'.join(TFS)}.json"), "w"), ensure_ascii=False, default=float)
     md = to_md(r)
     os.makedirs(os.path.join(ROOT, "docs", "arastirma"), exist_ok=True)
-    open(os.path.join(ROOT, "docs", "arastirma", f"geri-cekilme-{'-'.join(TFS)}-{(today + timedelta(hours=3)):%Y-%m-%d}.md"), "w", encoding="utf-8").write(md)
+    open(os.path.join(ROOT, "docs", "arastirma", f"geri-cekilme-{'spot-' if SPOT else ''}{'-'.join(TFS)}-{(today + timedelta(hours=3)):%Y-%m-%d}.md"), "w", encoding="utf-8").write(md)
     print(md)
     import notify
     chat = os.environ.get("TELEGRAM_CHAT_ID") or json.load(open(os.path.join(ROOT, "state", "futures.json"))).get("chat_id")

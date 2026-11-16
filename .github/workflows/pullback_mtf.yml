@@ -8,6 +8,9 @@ on:
       coins:
         description: "Coin sayısı (hacme göre)"
         default: "300"
+      spot:
+        description: "Spot analizi (1) / futures (0)"
+        default: "0"
 permissions:
   contents: write
 concurrency:
@@ -37,6 +40,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PB_TFS: ${{ inputs.tfs }}
           PB_COINS: ${{ inputs.coins }}
+          PB_SPOT: ${{ inputs.spot }}
         run: python bot/pullback_mtf.py
       - name: Kaydet
         run: |

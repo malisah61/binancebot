@@ -1,33 +1,5 @@
 {
- "positions": {
-  "XRPUSDT": {
-   "dir": -1,
-   "qty": 2530.3,
-   "entry": 0.9668,
-   "sl": 0.9970312161050101,
-   "tp1": 0.9214531758424848,
-   "tp2": 0.8912219597374746,
-   "opened": 1794715773065,
-   "until": 1795320000000,
-   "score": 23.223663750496414,
-   "tp1_done": false,
-   "orders": {
-    "sl": {
-     "kind": "algo",
-     "id": 1000000288008200
-    },
-    "tp1": {
-     "kind": "algo",
-     "id": 1000000288008204
-    },
-    "tp2": {
-     "kind": "algo",
-     "id": 1000000288008205
-    }
-   },
-   "slippage": 0.031
-  }
- },
+ "positions": {},
  "closed": [
   {
    "sym": "NIGHTUSDT",
@@ -88,6 +60,18 @@
    "reason": "SL",
    "score": 21.81825704954891,
    "slippage": -0.604
+  },
+  {
+   "sym": "XRPUSDT",
+   "dir": -1,
+   "entry": 0.9668,
+   "opened": 1794715773065,
+   "closed": 1794988055232,
+   "pnl": -71.72,
+   "roe": -14.66,
+   "reason": "SL",
+   "score": 23.223663750496414,
+   "slippage": 0.031
   }
  ],
  "paused": false,
@@ -1925,11 +1909,15 @@
   [
    1794987155700,
    4635.23
+  ],
+  [
+   1794988055232,
+   4562.87
   ]
  ],
  "errors": [],
  "halted": false,
- "equity": 4635.23,
+ "equity": 4562.87,
  "pending": {},
  "no_edge_note": false
 }

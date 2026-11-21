@@ -1,0 +1,70 @@
+# 📐 Günlük Formasyon Raporu — 21.11.2026
+
+Geçmiş: 40 coin, 2023'ten bugüne günlük mumlar. Eğitim/TEST ayrımı 13.12.2025.
+Taban (rastgele gün, 7 gün sonra): eğitim %0.75, test %-0.12
+
+## Formasyonlar kriptoda işe yarıyor mu?
+
+| Formasyon | Yön | Eğitim n / 7g isabet / ort R (rastgele) | TEST n / 7g isabet / ort R (rastgele) / PF | Karar |
+|---|---|---|---|---|
+| Ters omuz-baş-omuz | ↑ | 41 / %58.5 / 0.305 (-0.085) | 11 / %72.7 / 0.304 (0.125) / 1.99 | az örnek |
+| Gerçek aşağı kırılım | ↓ | 645 / %43.4 / -0.133 (0.105) | 395 / %54.4 / 0.215 (0.064) / 1.45 | zayıf/karışık |
+| Boğa tuzağı (sahte yukarı kırılım) | ↓ | 281 / %56.6 / -0.041 (-0.006) | 83 / %59.0 / 0.176 (0.079) / 1.37 | zayıf/karışık |
+| Yükseliş yutan mum | ↑ | 270 / %48.5 / -0.125 (-0.11) | 206 / %45.1 / 0.135 (-0.118) / 1.23 | zayıf/karışık |
+| İkili tepe | ↓ | 98 / %59.2 / 0.158 (-0.01) | 30 / %63.3 / 0.085 (-0.029) / 1.31 | zayıf/karışık |
+| İkili dip | ↑ | 101 / %41.6 / -0.017 (-0.044) | 25 / %64.0 / 0.072 (-0.137) / 1.25 | zayıf/karışık |
+| Düşüş yutan mum | ↓ | 256 / %58.6 / -0.078 (0.068) | 87 / %48.3 / 0.036 (0.036) / 1.06 | işe yaramıyor |
+| Trend dönüşü (düşüş yapısı kırıldı) | ↑ | 329 / %43.5 / -0.013 (-0.021) | 142 / %42.3 / 0.025 (-0.001) / 1.07 | zayıf/karışık |
+| Akşam yıldızı | ↓ | 31 / %58.1 / 0.116 (-0.078) | 21 / %38.1 / 0.008 (-0.077) / 1.01 | zayıf/karışık |
+| Ayı tuzağı (sahte aşağı kırılım) | ↑ | 250 / %49.2 / -0.048 (-0.061) | 158 / %40.5 / -0.06 (0.03) / 0.9 | zayıf/karışık |
+| Trend dönüşü (yükseliş yapısı kırıldı) | ↓ | 372 / %48.7 / -0.044 (0.005) | 141 / %51.8 / -0.097 (0.043) / 0.76 | işe yaramıyor |
+| Kayan yıldız | ↓ | 256 / %53.9 / -0.192 (0.001) | 100 / %60.0 / -0.116 (-0.022) / 0.82 | işe yaramıyor |
+| Gerçek yukarı kırılım | ↑ | 779 / %46.6 / 0.025 (0.038) | 280 / %42.1 / -0.131 (0.02) / 0.79 | işe yaramıyor |
+| Sabah yıldızı | ↑ | 38 / %42.1 / -0.362 (-0.197) | 16 / %25.0 / -0.263 (-0.185) / 0.65 | az örnek |
+| Çekiç | ↑ | 241 / %46.5 / -0.066 (-0.115) | 99 / %28.3 / -0.285 (0.034) / 0.61 | zayıf/karışık |
+| Omuz-baş-omuz | ↓ | 65 / %58.5 / 0.094 (-0.049) | 31 / %48.4 / -0.288 (0.137) / 0.57 | zayıf/karışık |
+
+İsabet: 7 gün sonra fiyat beklenen yönde mi. Ort R: formasyonun kendi stop/hedefiyle işlemin ortalama sonucu (komisyon dahil; R = risk birimi).
+Parantez: aynı stop/hedef mesafesiyle RASTGELE bir günde girseydin. Formasyonun gerçek katkısı = ort R − rastgele. 'Güvenilir' için bu fark hem eğitimde hem testte > 0,1R ve istatistiksel olarak anlamlı olmalı (şans eseri olma ihtimali düşük).
+
+## Bugünün tablosu (ilk 40 coin)
+
+- **BTC** 58,951.51 — 🔴 Gerçek aşağı kırılım (13.11, geçmişte zayıf/karışık); 🔴 Gerçek aşağı kırılım (20.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %2'inde (tepeden %-39.8). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 59,937.95, 63,023.08 · alıcı bölgesi 58,086.86
+- **ENA** 0.0991 — 🔴 Gerçek aşağı kırılım (13.11, geçmişte zayıf/karışık); 🔴 Gerçek aşağı kırılım (20.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %12'inde (tepeden %-67.3). Destek 0.0909656, 0.0862844 · direnç 0.151822, 0.165866 · alıcı bölgesi 0.0909656
+- **LTC** 40.6500 — 🟢 Çekiç (12.11, geçmişte zayıf/karışık); 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık); 🔴 Gerçek aşağı kırılım (20.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %2'inde (tepeden %-54.2). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 42.6288, 44.1171 · alıcı bölgesi 40.3963
+- **CYBER** 0.231 — 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık); 🟢 Ayı tuzağı (sahte aşağı kırılım) (17.11, geçmişte zayıf/karışık); 🟢 Ayı tuzağı (sahte aşağı kırılım) (20.11, geçmişte zayıf/karışık). Trend: yatay, EMA200 altı. Yıllık aralığın %4'inde (tepeden %-75.7). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 0.249406, 0.290094 · alıcı bölgesi 0.214531
+- **ARB** 0.1142 — 🔴 Trend dönüşü (yükseliş yapısı kırıldı) (13.11, geçmişte işe yaramıyor); 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık); 🔴 Gerçek aşağı kırılım (20.11, geçmişte zayıf/karışık). Trend: yatay, EMA200 altı. Yıllık aralığın %23'inde (tepeden %-55.3). Destek 0.0878437, 0.0839896 · direnç 0.164927, 0.172635 · alıcı bölgesi 0.0839896
+- **HBAR** 0.05161 — 🔴 Gerçek aşağı kırılım (13.11, geçmişte zayıf/karışık); 🔴 Gerçek aşağı kırılım (20.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %1'inde (tepeden %-66.8). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 0.0694347, 0.0778628 · alıcı bölgesi 0.0508928
+- **PUMP** 0.002429 — 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık); 🟢 Ayı tuzağı (sahte aşağı kırılım) (19.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %22'inde (tepeden %-64.3). Destek 0.00168116, 0.00156334 · direnç 0.00427303, 0.00439084 · alıcı bölgesi 0.00144553
+- **MMT** 0.2677 — 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık); 🟢 Trend dönüşü (düşüş yapısı kırıldı) (17.11, geçmişte zayıf/karışık); 🟢 Gerçek yukarı kırılım (18.11, geçmişte işe yaramıyor). Trend: alçalan tepeler/dipler (düşüş), EMA200 üstü. Yıllık aralığın %39'inde (tepeden %-50.3). Destek 0.261215, 0.21469 · direnç - · alıcı bölgesi 0.21469
+- **ZRO** 1.1550 — 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık); 🟢 Yükseliş yutan mum (16.11, geçmişte zayıf/karışık); 🟢 Çekiç (18.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %23'inde (tepeden %-55.4). Destek 1.1317, 1.0947 · direnç 1.2058 · alıcı bölgesi 1.1317
+- **KORUB** 5.0200 — 🟢 Çekiç (17.11, geçmişte zayıf/karışık). Trend: yatay, EMA200 altı. Yıllık aralığın %2'inde (tepeden %-80.5). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 6.5809, 7.0211 · alıcı bölgesi 4.8201
+- **GRAM** 0.982 — 🟢 Yükseliş yutan mum (17.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %2'inde (tepeden %-46.7). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 1.1870, 1.3533 · alıcı bölgesi 0.96524
+- **TRUMP** 0.861 — 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık); 🟢 Yükseliş yutan mum (17.11, geçmişte zayıf/karışık). Trend: yatay, EMA200 altı. Yıllık aralığın %0'inde (tepeden %-87.2). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 1.6201, 1.6798 · alıcı bölgesi 0.843854
+- **PEPE** 3.48e-06 — 🔴 Trend dönüşü (yükseliş yapısı kırıldı) (14.11, geçmişte işe yaramıyor); 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık); 🟢 Yükseliş yutan mum (16.11, geçmişte zayıf/karışık). Trend: yükselen tepeler/dipler (yükseliş), EMA200 altı. Yıllık aralığın %24'inde (tepeden %-52.1). Destek 2.84094e-06, 2.76906e-06 · direnç 4.06281e-06, 4.42219e-06 · alıcı bölgesi 2.76906e-06
+- **ZEC** 760.30 — 🔴 Gerçek aşağı kırılım (11.11, geçmişte zayıf/karışık); 🟢 Ayı tuzağı (sahte aşağı kırılım) (15.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %38'inde (tepeden %-55.2). Destek 536.68, 506.52 · direnç - · alıcı bölgesi 355.69
+- **NEAR** 2.8510 — 🔴 Gerçek aşağı kırılım (13.11, geçmişte zayıf/karışık); 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %39'inde (tepeden %-52.5). Destek 2.5141, 2.4211 · direnç 4.9310 · alıcı bölgesi 1.9563
+- **DOGE** 0.05439 — 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %1'inde (tepeden %-65.3). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 0.0697676, 0.0797707 · alıcı bölgesi 0.0530957
+- **SUI** 0.6517 — 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %1'inde (tepeden %-67.8). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 0.693856, 0.707669 · alıcı bölgesi 0.638606
+- **ADA** 0.1431 — 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %1'inde (tepeden %-70.4). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 0.163489, 0.166499 · alıcı bölgesi 0.142416
+- **LINK** 8.5450 — 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %17'inde (tepeden %-45.8). Destek 8.3680, 8.0022 · direnç 11.1121, 11.4780 · alıcı bölgesi 8.0022
+- **TAO** 181.00 — 🟢 Çekiç (13.11, geçmişte zayıf/karışık); 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %16'inde (tepeden %-52.1). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 192.46, 199.47 · alıcı bölgesi 174.95
+- **WLD** 0.2302 — 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık). Trend: yatay, EMA200 altı. Yıllık aralığın %1'inde (tepeden %-68.2). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 0.375198, 0.395956 · alıcı bölgesi 0.22989
+- **AVAX** 6.5210 — 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %8'inde (tepeden %-57.3). Destek 6.4060 · direnç 6.5378, 6.6696 · alıcı bölgesi 6.4060
+- **INJ** 6.3780 — 🟢 Ayı tuzağı (sahte aşağı kırılım) (15.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 üstü. Yıllık aralığın %55'inde (tepeden %-32.3). Destek 5.7201, 5.6064 · direnç 7.8814 · alıcı bölgesi 4.9239
+- **AAVE** 98.0300 — 🔴 Gerçek aşağı kırılım (13.11, geçmişte zayıf/karışık); 🟢 Ayı tuzağı (sahte aşağı kırılım) (15.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %26'inde (tepeden %-52.7). Destek 97.0283, 94.3250 · direnç 124.06, 129.47 · alıcı bölgesi 91.6217
+- **KERNEL** 0.0476 — 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık). Trend: yatay, EMA200 altı. Yıllık aralığın %16'inde (tepeden %-65.0). Destek 0.0475125, 0.0428875 · direnç 0.0502875, 0.0549125 · alıcı bölgesi 0.0382625
+- **FET** 0.1143 — 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %1'inde (tepeden %-64.0). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 0.161825, 0.172875 · alıcı bölgesi 0.113942
+- **ASTER** 0.5019 — 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %11'inde (tepeden %-60.0). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 0.573179, 0.630871 · alıcı bölgesi 0.499004
+- **XLM** 0.1276 — 🟢 Çekiç (12.11, geçmişte zayıf/karışık); 🟢 Ayı tuzağı (sahte aşağı kırılım) (15.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %1'inde (tepeden %-57.5). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 0.184472, 0.195303 · alıcı bölgesi 0.126705
+- **ICP** 2.0260 — 🔴 Gerçek aşağı kırılım (15.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %1'inde (tepeden %-58.0). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 2.1954, 2.2635 · alıcı bölgesi 2.0251
+- **ETH** 1,623.09 — 🔴 Gerçek aşağı kırılım (11.11, geçmişte zayıf/karışık); 🔴 Gerçek aşağı kırılım (14.11, geçmişte zayıf/karışık). Trend: yatay, EMA200 altı. Yıllık aralığın %6'inde (tepeden %-52.9). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 1,790.42, 1,871.77 · alıcı bölgesi 1,600.59
+- **SOL** 68.8800 — 🔴 Gerçek aşağı kırılım (11.11, geçmişte zayıf/karışık); 🔴 Gerçek aşağı kırılım (14.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %9'inde (tepeden %-53.7). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 72.9590, 74.3094 · alıcı bölgesi 64.8565
+- **XRP** 0.9107 — 🔴 Gerçek aşağı kırılım (11.11, geçmişte zayıf/karışık); 🔴 Gerçek aşağı kırılım (14.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %1'inde (tepeden %-62.3). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 1.0796, 1.2326 · alıcı bölgesi 0.892697
+- **ONDO** 0.282 — 🔴 Gerçek aşağı kırılım (14.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %19'inde (tepeden %-53.7). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 0.35264, 0.35966 · alıcı bölgesi 0.27541
+- **BCH** 194.80 — 🔴 Gerçek aşağı kırılım (11.11, geçmişte zayıf/karışık); 🔴 Gerçek aşağı kırılım (14.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %2'inde (tepeden %-70.9). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 213.83, 217.69 · alıcı bölgesi 194.52
+- **BNB** 540.84 — 🔴 Gerçek aşağı kırılım (13.11, geçmişte zayıf/karışık). Trend: alçalan tepeler/dipler (düşüş), EMA200 altı. Yıllık aralığın %2'inde (tepeden %-43.6). Destek yok (fiyat 180 günün tüm hacim bölgelerinin altında) · direnç 579.58, 585.41 · alıcı bölgesi 532.92
+- **UNI** 4.4760 — 🔴 Trend dönüşü (yükseliş yapısı kırıldı) (11.11, geçmişte işe yaramıyor); 🔴 Gerçek aşağı kırılım (12.11, geçmişte zayıf/karışık). Trend: yatay, EMA200 altı. Yıllık aralığın %25'inde (tepeden %-59.1). Destek 3.3044, 3.1247 · direnç 5.1015, 6.8986 · alıcı bölgesi 3.3044
+- **PROM** 4.5650 — 🔴 Trend dönüşü (yükseliş yapısı kırıldı) (11.11, geçmişte işe yaramıyor). Trend: alçalan tepeler/dipler (düşüş), EMA200 üstü. Yıllık aralığın %41'inde (tepeden %-53.6). Destek 2.6730, 1.0564 · direnç 5.0243, 5.1713 · alıcı bölgesi 2.6730
+
+Simülasyon/araştırmadır, yatırım tavsiyesi değildir.

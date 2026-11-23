@@ -3901,11 +3901,15 @@
   [
    1795434750124,
    4664.74
+  ],
+  [
+   1795435649488,
+   4664.74
   ]
  ],
  "errors": [],
  "halted": false,
  "equity": 4664.74,
  "pending": {},
- "no_edge_note": false
+ "no_edge_note": true
 }

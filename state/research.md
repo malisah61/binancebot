@@ -1,19 +1,19 @@
-# V5 Araştırma Raporu — 19.11.2026 10:30 UTC
+# V5 Araştırma Raporu — 23.11.2026 10:56 UTC
 
-40 coin · değerlendirme 21.08.2026'dan bugüne (90 gün) · eğitim/TEST ayrımı 23.10.2026
+40 coin · değerlendirme 25.08.2026'dan bugüne (90 gün) · eğitim/TEST ayrımı 27.10.2026
 
 ## 1. Mevcut model: kaldıraçlı işlem sonuçları (tüm dönem)
 
 | Periyot | Kaldıraç | İşlem | Kazanma | Ort. ROE | PF | Ort. R | Likidasyon | 100$ marjla net | Maks. DD |
 |---|---|---|---|---|---|---|---|---|---|
-| 15m | 5x | 29299 | %49.8 | %-0.47 | 0.85 | 0.007 | 0 | -13626.0$ | 15400.0$ |
-| 15m | 10x | 29302 | %49.8 | %-0.94 | 0.85 | 0.007 | 11 | -27654.0$ | 31202.0$ |
-| 30m | 5x | 14213 | %50.5 | %-0.4 | 0.91 | 0.02 | 1 | -5742.0$ | 7512.0$ |
-| 30m | 10x | 14216 | %50.5 | %-0.8 | 0.91 | 0.02 | 16 | -11336.0$ | 14986.0$ |
-| 1h | 5x | 7046 | %50.6 | %-0.32 | 0.95 | 0.025 | 0 | -2263.0$ | 4920.0$ |
-| 1h | 10x | 7052 | %50.5 | %-0.68 | 0.95 | 0.025 | 25 | -4777.0$ | 10072.0$ |
-| 4h | 5x | 1876 | %53.0 | %1.09 | 1.09 | 0.082 | 3 | 2043.0$ | 2349.0$ |
-| 4h | 10x | 1880 | %53.0 | %2.63 | 1.12 | 0.085 | 41 | 4944.0$ | 4834.0$ |
+| 15m | 5x | 28971 | %49.7 | %-0.53 | 0.83 | 0.002 | 0 | -15366.0$ | 16049.0$ |
+| 15m | 10x | 28973 | %49.7 | %-1.05 | 0.83 | 0.002 | 6 | -30559.0$ | 32163.0$ |
+| 30m | 5x | 14230 | %49.9 | %-0.57 | 0.87 | 0.002 | 0 | -8163.0$ | 8383.0$ |
+| 30m | 10x | 14232 | %49.9 | %-1.12 | 0.87 | 0.003 | 19 | -15918.0$ | 16617.0$ |
+| 1h | 5x | 6987 | %49.5 | %-0.54 | 0.91 | 0.003 | 0 | -3805.0$ | 4477.0$ |
+| 1h | 10x | 7000 | %49.4 | %-1.14 | 0.91 | 0.003 | 26 | -7952.0$ | 9315.0$ |
+| 4h | 5x | 1838 | %51.1 | %0.31 | 1.03 | 0.044 | 1 | 572.0$ | 3292.0$ |
+| 4h | 10x | 1845 | %51.0 | %0.56 | 1.02 | 0.044 | 33 | 1033.0$ | 6774.0$ |
 
 PF = kâr faktörü (toplam kazanç / toplam kayıp, 1 üstü kârlı). R = risk birimi (stop mesafesi).
 
@@ -23,227 +23,221 @@ PF = kâr faktörü (toplam kazanç / toplam kayıp, 1 üstü kârlı). R = risk
 
 | Bileşen | IC | İsabet | ↑ dediğinde yükseldi | ↓ dediğinde düştü | İşlemde aynı yöndeyken kazanma | Ters yöndeyken kazanma |
 |---|---|---|---|---|---|---|
-| Trend | -0.076 | %47.1 | %39.1 | %51.3 | %49.5 (6770) | %55.9 (487) |
-| Momentum | -0.035 | %47.3 | %43.0 | %52.1 | %49.6 (5882) | %51.8 (884) |
-| Open Interest | -0.02 | %46.6 | %44.0 | %51.9 | %52.2 (2563) | %46.3 (354) |
-| Hacim | -0.027 | %49.4 | %44.4 | %52.1 | %52.0 (4880) | %44.3 (641) |
-| Funding+L/S | -0.027 | %44.7 | %44.1 | %55.0 | %46.0 (2145) | %54.5 (2599) |
-| FVG+Likidite avı | 0.001 | %51.4 | %47.4 | %56.3 | %48.4 (3243) | %51.1 (2624) |
-| VWAP | -0.041 | %47.6 | %40.8 | %52.3 | %49.8 (7348) | %50.4 (421) |
+| Trend | -0.088 | %46.2 | %39.7 | %50.0 | %50.5 (6693) | %57.0 (446) |
+| Momentum | -0.032 | %47.0 | %43.7 | %50.8 | %50.6 (5738) | %52.2 (870) |
+| Open Interest | -0.019 | %46.0 | %45.7 | %46.7 | %54.3 (2455) | %47.4 (329) |
+| Hacim | -0.023 | %48.8 | %44.9 | %51.0 | %52.6 (4791) | %48.1 (648) |
+| Funding+L/S | -0.012 | %47.2 | %46.6 | %55.4 | %46.7 (2290) | %54.9 (2821) |
+| FVG+Likidite avı | -0.008 | %51.5 | %48.0 | %55.7 | %50.7 (3186) | %52.1 (2566) |
+| VWAP | -0.054 | %46.9 | %41.4 | %51.0 | %51.1 (7258) | %49.5 (384) |
 
-Ham göstergeler (IC, büyükten küçüğe): EMA dizilimi -0.076, Üst periyot trendi -0.072, Fiyat>EMA200 -0.071, RSI -0.069, Z-Score -0.058, VWAP üstü/altı -0.057, MACD yönü -0.039, FVG -0.036, Likidite avı +0.027, Funding -0.026
+Ham göstergeler (IC, büyükten küçüğe): EMA dizilimi -0.090, Üst periyot trendi -0.088, Fiyat>EMA200 -0.086, RSI -0.070, VWAP üstü/altı -0.061, Z-Score -0.054, Funding -0.047, FVG -0.042, Bollinger sıkışma -0.027, RVOL -0.025
 
 ### 30m
 
 | Bileşen | IC | İsabet | ↑ dediğinde yükseldi | ↓ dediğinde düştü | İşlemde aynı yöndeyken kazanma | Ters yöndeyken kazanma |
 |---|---|---|---|---|---|---|
-| Trend | -0.088 | %49.8 | %38.6 | %53.8 | %47.9 (3258) | %50.7 (359) |
-| Momentum | -0.057 | %46.1 | %39.7 | %52.9 | %49.4 (3078) | %53.0 (279) |
-| Open Interest | -0.041 | %45.5 | %43.1 | %49.3 | %48.8 (1819) | %45.0 (218) |
-| Hacim | -0.078 | %47.0 | %37.3 | %50.9 | %48.9 (2387) | %50.5 (208) |
-| Funding+L/S | -0.035 | %43.5 | %42.8 | %54.8 | %45.0 (965) | %50.8 (1390) |
-| FVG+Likidite avı | 0.018 | %53.1 | %47.5 | %60.6 | %49.4 (1541) | %48.2 (1362) |
-| VWAP | -0.047 | %47.6 | %38.6 | %53.5 | %47.7 (3462) | %50.0 (170) |
+| Trend | -0.102 | %47.7 | %37.9 | %51.8 | %47.2 (3204) | %56.0 (332) |
+| Momentum | -0.054 | %46.0 | %40.9 | %51.7 | %48.9 (2979) | %50.5 (305) |
+| Open Interest | -0.044 | %45.1 | %45.0 | %45.2 | %48.9 (1760) | %44.2 (206) |
+| Hacim | -0.076 | %46.3 | %40.8 | %48.6 | %48.1 (2397) | %46.5 (202) |
+| Funding+L/S | -0.018 | %46.0 | %45.3 | %55.8 | %46.5 (1038) | %49.4 (1543) |
+| FVG+Likidite avı | 0.002 | %52.4 | %47.9 | %58.3 | %49.3 (1483) | %48.9 (1373) |
+| VWAP | -0.061 | %46.7 | %39.6 | %51.9 | %47.9 (3486) | %47.3 (146) |
 
-Ham göstergeler (IC, büyükten küçüğe): RSI -0.084, Üst periyot trendi -0.074, Z-Score -0.073, Fiyat>EMA200 -0.069, EMA dizilimi -0.064, OBV yönü -0.062, VWAP üstü/altı -0.061, Likidite avı +0.049, MACD yönü -0.047, FVG -0.047
+Ham göstergeler (IC, büyükten küçüğe): Üst periyot trendi -0.097, Fiyat>EMA200 -0.097, RSI -0.090, EMA dizilimi -0.083, Z-Score -0.079, VWAP üstü/altı -0.065, OBV yönü -0.060, FVG -0.057, MACD yönü -0.046, Likidite avı +0.041
 
 ### 1h
 
 | Bileşen | IC | İsabet | ↑ dediğinde yükseldi | ↓ dediğinde düştü | İşlemde aynı yöndeyken kazanma | Ters yöndeyken kazanma |
 |---|---|---|---|---|---|---|
-| Trend | -0.078 | %53.3 | %36.4 | %57.2 | %51.4 (1583) | %45.2 (208) |
-| Momentum | -0.051 | %46.2 | %37.4 | %55.7 | %48.4 (1540) | %54.9 (113) |
-| Open Interest | -0.073 | %43.7 | %37.4 | %51.0 | %46.4 (1170) | %57.1 (147) |
-| Hacim | -0.072 | %49.4 | %33.8 | %53.5 | %45.4 (1178) | %55.3 (76) |
-| Funding+L/S | -0.038 | %42.5 | %41.7 | %54.9 | %43.2 (454) | %53.8 (664) |
-| FVG+Likidite avı | 0.014 | %51.5 | %42.9 | %64.4 | %50.7 (787) | %47.3 (659) |
-| VWAP | -0.04 | %48.7 | %36.5 | %56.3 | %46.6 (1553) | %77.2 (136) |
+| Trend | -0.098 | %50.3 | %34.5 | %54.3 | %48.8 (1576) | %52.9 (189) |
+| Momentum | -0.042 | %46.7 | %39.0 | %55.0 | %48.9 (1549) | %53.0 (100) |
+| Open Interest | -0.082 | %42.6 | %38.1 | %48.1 | %46.4 (1203) | %55.8 (138) |
+| Hacim | -0.067 | %49.0 | %35.0 | %52.6 | %46.4 (1182) | %51.4 (70) |
+| Funding+L/S | -0.02 | %44.5 | %43.6 | %56.9 | %41.4 (481) | %51.0 (777) |
+| FVG+Likidite avı | 0.02 | %52.0 | %44.0 | %64.5 | %49.6 (789) | %45.8 (671) |
+| VWAP | -0.044 | %47.9 | %37.9 | %54.6 | %47.1 (1640) | %63.4 (112) |
 
-Ham göstergeler (IC, büyükten küçüğe): RSI -0.089, Üst periyot trendi -0.079, Taker alım -0.064, OI değişimi -0.063, Z-Score -0.062, EMA dizilimi -0.058, Fiyat>EMA200 -0.056, OI rejimi +0.043, VWAP üstü/altı -0.037, Funding +0.037
+Ham göstergeler (IC, büyükten küçüğe): Üst periyot trendi -0.097, RSI -0.090, Fiyat>EMA200 -0.088, EMA dizilimi -0.085, OI değişimi -0.075, Z-Score -0.060, OI rejimi +0.052, Taker alım -0.052, VWAP üstü/altı -0.043, Likidite avı +0.035
 
 ### 4h
 
 | Bileşen | IC | İsabet | ↑ dediğinde yükseldi | ↓ dediğinde düştü | İşlemde aynı yöndeyken kazanma | Ters yöndeyken kazanma |
 |---|---|---|---|---|---|---|
-| Trend | -0.083 | %58.8 | %36.3 | %61.4 | %61.6 (396) | %37.7 (53) |
-| Momentum | -0.115 | %45.5 | %33.0 | %55.8 | %56.3 (350) | %68.8 (32) |
-| Open Interest | -0.085 | %48.7 | %34.6 | %57.1 | %57.0 (363) | %72.7 (33) |
-| Hacim | -0.13 | %53.3 | %37.5 | %55.2 | %60.8 (265) | %58.8 (17) |
-| Funding+L/S | -0.034 | %40.1 | %39.0 | %58.2 | %47.8 (90) | %66.7 (174) |
-| FVG+Likidite avı | 0.033 | %51.8 | %45.0 | %68.0 | %58.7 (213) | %56.1 (148) |
-| VWAP | -0.111 | %53.0 | %30.2 | %59.0 | %55.4 (370) | %63.2 (19) |
+| Trend | -0.073 | %56.7 | %31.9 | %59.3 | %56.7 (439) | %25.0 (44) |
+| Momentum | -0.133 | %43.3 | %31.3 | %53.5 | %50.7 (373) | %74.1 (27) |
+| Open Interest | -0.12 | %45.5 | %33.3 | %52.9 | %52.5 (375) | %52.2 (46) |
+| Hacim | -0.178 | %46.4 | %30.2 | %48.4 | %54.9 (275) | %63.6 (11) |
+| Funding+L/S | -0.01 | %40.8 | %39.3 | %61.0 | %37.9 (87) | %57.7 (208) |
+| FVG+Likidite avı | 0.06 | %55.1 | %48.5 | %70.1 | %58.2 (225) | %44.3 (158) |
+| VWAP | -0.184 | %47.1 | %26.0 | %53.9 | %49.0 (400) | %64.7 (17) |
 
-Ham göstergeler (IC, büyükten küçüğe): Z-Score -0.156, RSI -0.142, MACD yönü -0.092, VWAP üstü/altı -0.092, Fiyat>EMA200 -0.090, Likidite avı +0.083, OI değişimi -0.081, OI rejimi +0.079, Taker alım -0.074, RVOL +0.067
+Ham göstergeler (IC, büyükten küçüğe): Z-Score -0.185, RSI -0.177, MACD yönü -0.168, VWAP üstü/altı -0.150, OI değişimi -0.139, Likidite avı +0.116, OI rejimi +0.100, OBV yönü -0.085, RVOL +0.082, Taker alım -0.079
 
 ## 3. Öğrenme: yeni ağırlıklar (eğitimde bulundu, TEST'te sınandı)
 
 | Periyot | Yöntem | Eşik | Mevcut model TEST ort. R / kazanma | Yeni model TEST ort. R / kazanma | Karar |
 |---|---|---|---|---|---|
-| 15m | mevcut | 74/26 | 0.006 / %50.1 (8723) | -0.007 / %49.7 (3240) | ❌ mevcut kalır |
-| 30m | IC+ | 58/42 | -0.014 / %48.9 (4278) | -0.081 / %46.2 (3147) | ❌ mevcut kalır |
-| 1h | IC+ | 55/45 | 0.015 / %49.9 (2081) | -0.085 / %45.2 (2147) | ❌ mevcut kalır |
-| 4h | mevcut | 55/45 | 0.183 / %58.5 (491) | 0.165 / %57.2 (547) | ❌ mevcut kalır |
+| 15m | mevcut | 74/26 | 0.025 / %51.3 (8551) | -0.023 / %49.0 (3174) | ❌ mevcut kalır |
+| 30m | mevcut | 55/45 | -0.009 / %49.0 (4213) | -0.017 / %48.8 (4412) | ❌ mevcut kalır |
+| 1h | IC+ | 74/26 | -0.006 / %48.7 (2100) | -0.164 / %41.9 (248) | ❌ mevcut kalır |
+| 4h | IC+ | 55/45 | 0.122 / %52.4 (532) | 0.118 / %57.3 (555) | ❌ mevcut kalır |
 
 Ağırlıklar:
 - 15m: Trend 20, Momentum 18, Open Interest 15, Hacim 10, Funding+L/S 10, FVG+Likidite avı 10, VWAP 5
-- 30m: Funding+L/S 68.7, VWAP 31.3
-- 1h: Momentum 0.2, Open Interest 9.4, Hacim 48.1, Funding+L/S 26.7, VWAP 15.7
-- 4h: Trend 20, Momentum 18, Open Interest 15, Hacim 10, Funding+L/S 10, FVG+Likidite avı 10, VWAP 5
+- 30m: Trend 20, Momentum 18, Open Interest 15, Hacim 10, Funding+L/S 10, FVG+Likidite avı 10, VWAP 5
+- 1h: Open Interest 31.6, Hacim 4.2, Funding+L/S 24.0, FVG+Likidite avı 40.2
+- 4h: Funding+L/S 18.3, FVG+Likidite avı 81.7
 
 ## 4. Strateji yarışması (yalnız canlı botun da görebildiği veriler; eğitimde seçildi, TEST'te sınandı)
 
-### 15m — 217 strateji denendi · ❌ hiçbiri yeterince iyi değil, mevcut kalır
+### 15m — 207 strateji denendi · ❌ hiçbiri yeterince iyi değil, mevcut kalır
 
-Mevcut (trend, filtresiz) TEST: 2930 işlem, kazanma %49.6, ort R -0.001, PF 0.82
+Mevcut (trend, filtresiz) TEST: 2957 işlem, kazanma %48.3, ort R -0.023, PF 0.78
 
 | # | Strateji | Eğitim ort R (n) | TEST ort R | TEST kazanma | TEST PF | 5x ort ROE | 10x ort ROE | 10x likidasyon |
 |---|---|---|---|---|---|---|---|---|
-| 1 | Geri çekilmede limit giriş (skor ≥66 / ≤34, dip-tepe aralığının en fazla %50'inde, 0.382 Fibonacci geri çekilmesine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.5R / 3.0R) | 0.114 (1914) | -0.027 | %39.0 (784) | 0.82 | %-0.83 | %-1.95 | 5 |
-| 2 | Geri çekilmede limit giriş (skor ≥66 / ≤34, dip-tepe aralığının en fazla %50'inde, 0.5 Fibonacci geri çekilmesine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.5R / 3.0R) | 0.114 (1914) | -0.027 | %39.0 (784) | 0.82 | %-0.83 | %-1.95 | 5 |
-| 3 | Geri çekilmede limit giriş (skor ≥66 / ≤34, dip-tepe aralığının en fazla %50'inde, 0.382 Fibonacci geri çekilmesine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.5R / 3.0R) +üst trend yönünde | 0.112 (1884) | -0.014 | %39.4 (767) | 0.84 | %-0.73 | %-1.77 | 5 |
-| 4 | Geri çekilmede limit giriş (skor ≥66 / ≤34, dip-tepe aralığının en fazla %50'inde, 0.5 Fibonacci geri çekilmesine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.5R / 3.0R) +üst trend yönünde | 0.112 (1884) | -0.014 | %39.4 (767) | 0.84 | %-0.73 | %-1.77 | 5 |
-| 5 | Geri çekilmede limit giriş (skor ≥58 / ≤42, dip-tepe aralığının en fazla %70'inde, 0.5 Fibonacci geri çekilmesine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.5R / 3.0R) | 0.087 (2822) | 0.036 | %40.0 (1276) | 0.9 | %-0.41 | %-0.74 | 4 |
+| 1 | Trend takibi (skor ≥58 / ≤42) +FVG/likidite aynı yönde +BTC trendi aynı yönde, SL1.0/TP1.5-2.5 | 0.034 (7535) | -0.056 | %37.6 (3177) | 0.71 | %-0.76 | %-1.51 | 0 |
+| 2 | Trend takibi (skor ≥66 / ≤34) +FVG/likidite aynı yönde +BTC trendi aynı yönde, SL1.0/TP1.5-2.5 | 0.034 (7270) | -0.05 | %37.9 (3040) | 0.72 | %-0.72 | %-1.43 | 0 |
+| 3 | Trend takibi (skor ≥66 / ≤34) +üst trend yönünde +FVG/likidite aynı yönde +BTC trendi aynı yönde, SL1.0/TP1.5-2.5 | 0.033 (7184) | -0.054 | %37.8 (3008) | 0.72 | %-0.71 | %-1.41 | 0 |
+| 4 | Trend takibi (skor ≥58 / ≤42) +üst trend yönünde +FVG/likidite aynı yönde +BTC trendi aynı yönde, SL1.0/TP1.5-2.5 | 0.03 (7401) | -0.055 | %37.6 (3128) | 0.71 | %-0.74 | %-1.48 | 0 |
+| 5 | Geri çekilmede limit giriş (skor ≥66 / ≤34, dip-tepe aralığının en fazla %50'inde, 0.5 Fibonacci geri çekilmesine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.5R / 3.0R) +üst trend yönünde +BTC trendi aynı yönde | 0.068 (1384) | -0.114 | %36.2 (558) | 0.65 | %-1.54 | %-3.08 | 0 |
 
 ### 30m — 207 strateji denendi · ❌ hiçbiri yeterince iyi değil, mevcut kalır
 
-Mevcut (trend, filtresiz) TEST: 1440 işlem, kazanma %51.0, ort R 0.032, PF 0.92
+Mevcut (trend, filtresiz) TEST: 1454 işlem, kazanma %49.7, ort R 0.012, PF 0.81
 
 | # | Strateji | Eğitim ort R (n) | TEST ort R | TEST kazanma | TEST PF | 5x ort ROE | 10x ort ROE | 10x likidasyon |
 |---|---|---|---|---|---|---|---|---|
-| 1 | Geri çekilmede limit giriş (skor ≥58 / ≤42, dip-tepe aralığının en fazla %70'inde, 0.382 Fibonacci geri çekilmesine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.5R / 3.0R) | 0.067 (1591) | 0.056 | %42.7 (698) | 0.99 | %-0.05 | %-0.29 | 7 |
-| 2 | Geri çekilmede limit giriş (skor ≥58 / ≤42, dip-tepe aralığının en fazla %70'inde, 0.382 Fibonacci geri çekilmesine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.0R / 2.0R) | 0.061 (1807) | 0.033 | %50.4 (788) | 0.93 | %-0.37 | %-0.82 | 6 |
-| 3 | Geri çekilmede limit giriş (skor ≥66 / ≤34, dip-tepe aralığının en fazla %70'inde, 0.382 Fibonacci geri çekilmesine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.5R / 3.0R) | 0.064 (1502) | 0.026 | %41.3 (653) | 0.92 | %-0.53 | %-1.26 | 7 |
-| 4 | Geri çekilmede limit giriş (skor ≥58 / ≤42, dip-tepe aralığının en fazla %70'inde, 0.382 Fibonacci geri çekilmesine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.0R / 2.0R) +üst trend yönünde | 0.051 (1827) | 0.034 | %50.3 (783) | 0.92 | %-0.48 | %-1.03 | 6 |
-| 5 | Geri çekilmede limit giriş (skor ≥66 / ≤34, dip-tepe aralığının en fazla %70'inde, 0.382 Fibonacci geri çekilmesine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.0R / 2.0R) | 0.052 (1697) | 0.022 | %50.0 (736) | 0.9 | %-0.58 | %-1.24 | 6 |
+| 1 | Ortalamaya dönüş (|Z|≥3.0, RSI 30/70, likidite avı şart), SL1.0/TP1.5-2.5 | 0.183 (186) | -0.27 | %31.0 (87) | 0.55 | %-1.99 | %-3.98 | 0 |
+| 2 | Ortalamaya dönüş (|Z|≥2.5, RSI 25/75, likidite avı şart), SL1.0/TP1.5-2.5 | 0.14 (274) | -0.18 | %32.8 (119) | 0.64 | %-1.68 | %-3.36 | 0 |
+| 3 | Ortalamaya dönüş (|Z|≥3.0, RSI 25/75, likidite avı şart), SL1.0/TP1.5-2.5 | 0.189 (113) | -0.348 | %27.5 (51) | 0.44 | %-2.91 | %-5.82 | 0 |
+| 4 | Ortalamaya dönüş (|Z|≥3.0, RSI 25/75), SL1.5/TP1.5-3.0 | 0.112 (312) | -0.031 | %48.7 (113) | 0.8 | %-1.14 | %-2.27 | 0 |
+| 5 | Ortalamaya dönüş (|Z|≥3.0, RSI 25/75), SL1.0/TP1.5-2.5 | 0.107 (313) | -0.033 | %37.7 (114) | 0.8 | %-0.93 | %-1.87 | 0 |
 
-### 1h — 213 strateji denendi · ❌ hiçbiri yeterince iyi değil, mevcut kalır
+### 1h — 217 strateji denendi · ❌ hiçbiri yeterince iyi değil, mevcut kalır
 
-Mevcut (trend, filtresiz) TEST: 738 işlem, kazanma %54.5, ort R 0.13, PF 1.09
-
-| # | Strateji | Eğitim ort R (n) | TEST ort R | TEST kazanma | TEST PF | 5x ort ROE | 10x ort ROE | 10x likidasyon |
-|---|---|---|---|---|---|---|---|---|
-| 1 | Kazanan ortak noktaları kuralı (skor ≥55 / ≤45 VE Dip-tepe konumu (yön) ≤ 0.49 VE Hacim (yön) ≥ 0.11 VE Agresif alım-satım (yön) ≤ 0.05), fiyatın 0.5 ATR gerisine limit emirle giriş (6 mum geçerli), SL1.0/TP1.5-2.5 | 0.224 (431) | 0.07 | %42.5 (193) | 0.9 | %-0.44 | %-0.88 | 0 |
-| 2 | Kazanan ortak noktaları kuralı (skor ≥55 / ≤45 VE Dip-tepe konumu (yön) ≤ 0.49 VE VWAP bileşeni (yön) ≥ 0.24 VE Agresif alım-satım (yön) ≤ 0.05), fiyatın 0.5 ATR gerisine limit emirle giriş (6 mum geçerli), SL1.0/TP1.5-2.5 | 0.221 (375) | 0.001 | %40.4 (136) | 0.88 | %-0.6 | %-1.19 | 0 |
-| 3 | Kazanan ortak noktaları kuralı (skor ≥55 / ≤45 VE Dip-tepe konumu (yön) ≤ 0.49 VE VWAP'tan uzaklık ATR (yön) ≥ 0.49 VE Agresif alım-satım (yön) ≤ 0.05), fiyatın 0.5 ATR gerisine limit emirle giriş (6 mum geçerli), SL1.0/TP1.5-2.5 | 0.221 (375) | 0.001 | %40.4 (136) | 0.88 | %-0.6 | %-1.19 | 0 |
-| 4 | Kazanan ortak noktaları kuralı (skor ≥55 / ≤45 VE Dip-tepe konumu (yön) ≤ 0.49 VE VWAP bileşeni (yön) ≥ 0.24 VE Hacim (yön) ≥ -0.15), fiyatın 0.5 ATR gerisine limit emirle giriş (6 mum geçerli), SL1.0/TP1.5-2.5 | 0.21 (385) | -0.073 | %38.3 (141) | 0.75 | %-1.21 | %-2.41 | 0 |
-| 5 | Kazanan ortak noktaları kuralı (skor ≥55 / ≤45 VE Dip-tepe konumu (yön) ≤ 0.49 VE VWAP'tan uzaklık ATR (yön) ≥ 0.49 VE Hacim (yön) ≥ -0.15), fiyatın 0.5 ATR gerisine limit emirle giriş (6 mum geçerli), SL1.0/TP1.5-2.5 | 0.21 (385) | -0.073 | %38.3 (141) | 0.75 | %-1.21 | %-2.41 | 0 |
-
-### 4h — 194 strateji denendi · ✅ kazanan benimsendi
-
-Mevcut (trend, filtresiz) TEST: 197 işlem, kazanma %61.4, ort R 0.24, PF 1.4
+Mevcut (trend, filtresiz) TEST: 727 işlem, kazanma %52.4, ort R 0.096, PF 0.99
 
 | # | Strateji | Eğitim ort R (n) | TEST ort R | TEST kazanma | TEST PF | 5x ort ROE | 10x ort ROE | 10x likidasyon |
 |---|---|---|---|---|---|---|---|---|
-| 1 | Geri çekilmede limit giriş (skor ≥58 / ≤42, dip-tepe aralığının en fazla %50'inde, 0.382 Fibonacci geri çekilmesine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.5R / 3.0R) | 0.18 (177) | 0.409 | %54.5 (66) | 1.29 | %5.32 | %12.24 | 13 |
-| 2 | Geri çekilmede limit giriş (skor ≥58 / ≤42, dip-tepe aralığının en fazla %50'inde, 0.5 Fibonacci geri çekilmesine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.5R / 3.0R) | 0.18 (177) | 0.409 | %54.5 (66) | 1.29 | %5.32 | %12.24 | 13 |
-| 3 | Geri çekilmede limit giriş (skor ≥58 / ≤42, dip-tepe aralığının en fazla %50'inde, 0.382 Fibonacci geri çekilmesine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.5R / 3.0R) +üst trend yönünde | 0.147 (167) | 0.482 | %56.1 (57) | 1.4 | %6.83 | %13.71 | 11 |
-| 4 | Geri çekilmede limit giriş (skor ≥58 / ≤42, dip-tepe aralığının en fazla %50'inde, 0.5 Fibonacci geri çekilmesine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.5R / 3.0R) +üst trend yönünde | 0.147 (167) | 0.482 | %56.1 (57) | 1.4 | %6.83 | %13.71 | 11 |
-| 5 | Geri çekilmede limit giriş (skor ≥66 / ≤34, dip-tepe aralığının en fazla %50'inde, fiyatın 0.5 ATR gerisine limit emir, 6 mum geçerli, stop son 12 mumun dibinin/tepesinin ötesi, hedef 1.5R / 3.0R) | 0.183 (100) | 0.19 | %50.0 (24) | 0.72 | %-5.59 | %-5.51 | 5 |
+| 1 | Kazanan ortak noktaları kuralı (skor ≥55 / ≤45 VE Dip-tepe konumu (yön) ≤ 0.49 VE VWAP bileşeni (yön) ≥ 0.23 VE Agresif alım-satım (yön) ≤ 0.05), fiyatın 0.5 ATR gerisine limit emirle giriş (6 mum geçerli), SL1.0/TP1.5-2.5 | 0.189 (385) | 0.042 | %43.7 (126) | 0.94 | %-0.22 | %-0.45 | 0 |
+| 2 | Kazanan ortak noktaları kuralı (skor ≥55 / ≤45 VE Dip-tepe konumu (yön) ≤ 0.49 VE VWAP'tan uzaklık ATR (yön) ≥ 0.47 VE Agresif alım-satım (yön) ≤ 0.05), fiyatın 0.5 ATR gerisine limit emirle giriş (6 mum geçerli), SL1.0/TP1.5-2.5 | 0.189 (385) | 0.042 | %43.7 (126) | 0.94 | %-0.22 | %-0.45 | 0 |
+| 3 | Kazanan ortak noktaları kuralı (skor ≥55 / ≤45 VE Dip-tepe konumu (yön) ≤ 0.49 VE VWAP bileşeni (yön) ≥ 0.23), fiyatın 0.5 ATR gerisine limit emirle giriş (6 mum geçerli), SL1.0/TP1.5-2.5 | 0.16 (422) | -0.015 | %41.7 (132) | 0.88 | %-0.48 | %-0.95 | 0 |
+| 4 | Kazanan ortak noktaları kuralı (skor ≥55 / ≤45 VE FVG+Likidite (yön) ≤ -0.60 VE Saat (UTC) ≥ 12.00 VE RVOL ≤ 1.39), SL1.0/TP1.5-2.5 | 0.124 (699) | 0.169 | %46.5 (288) | 1.09 | %0.39 | %0.91 | 1 |
+| 5 | Ortalamaya dönüş (|Z|≥3.0, RSI 25/75), SL1.0/TP1.5-2.5 | 0.225 (170) | 0.254 | %48.3 (58) | 1.57 | %2.96 | %5.92 | 0 |
+
+### 4h — 194 strateji denendi · ❌ hiçbiri yeterince iyi değil, mevcut kalır
+
+Mevcut (trend, filtresiz) TEST: 197 işlem, kazanma %57.9, ort R 0.234, PF 1.41
+
+| # | Strateji | Eğitim ort R (n) | TEST ort R | TEST kazanma | TEST PF | 5x ort ROE | 10x ort ROE | 10x likidasyon |
+|---|---|---|---|---|---|---|---|---|
+| 1 | Likidite avı tersine dönüş, SL1.5/TP1.5-3.0 | 0.064 (478) | -0.014 | %48.8 (201) | 0.91 | %-1.17 | %-2.21 | 3 |
+| 2 | Ortalamaya dönüş (|Z|≥2.0, RSI 30/70), SL2.0/TP1.0-2.0 | 0.082 (231) | -0.071 | %61.0 (82) | 0.76 | %-3.0 | %-7.22 | 5 |
+| 3 | Likidite avı tersine dönüş +üst trende karşı, SL1.5/TP1.5-3.0 | 0.049 (403) | -0.225 | %40.4 (161) | 0.63 | %-5.35 | %-10.61 | 2 |
+| 4 | Ortalamaya dönüş (|Z|≥2.5, RSI 30/70), SL2.0/TP1.0-2.0 | 0.077 (136) | 0.023 | %68.5 (54) | 0.89 | %-1.23 | %-3.55 | 6 |
+| 5 | Ortalamaya dönüş (|Z|≥2.5, RSI 30/70), SL1.5/TP1.5-3.0 | 0.068 (133) | -0.12 | %43.4 (53) | 0.59 | %-6.55 | %-11.94 | 4 |
 
 
 ## 5. 15m (piyasa girişli): kazananlar ve kaybedenler
 
-Tüm olaylar: kazanma %40.0 (eğitim) / %39.6 (test); ort. net R -0.137 / -0.142
+Tüm olaylar: kazanma %39.5 (eğitim) / %39.2 (test); ort. net R -0.162 / -0.159
 
 **Kazanan vs kaybeden girişte o anki durum** (etki = standart fark; ✓ = test döneminde de aynı yönde)
 
 | Özellik | Kazananlarda | Kaybedenlerde | Etki (eğitim) | Etki (test) | |
 |---|---|---|---|---|---|
-| BTC 1s yönü (yön) | 0.15 | 0.192 | -0.043 | -0.032 | ✓ |
-| Z-Score (yön) | 0.847 | 0.877 | -0.030 | -0.040 | ✓ |
-| Dip-tepe konumu (yön) | 0.721 | 0.726 | -0.030 | -0.017 | ✗ |
-| Momentum (yön) | 0.244 | 0.255 | -0.024 | -0.026 | ✗ |
-| Saat (UTC) | 11.416 | 11.585 | -0.024 | +0.015 | ✗ |
-| VWAP bileşeni (yön) | 0.697 | 0.689 | +0.022 | +0.028 | ✗ |
-| Hacim (yön) | 0.172 | 0.178 | -0.020 | +0.019 | ✗ |
-| RSI (yön, 50 merkez) | 8.883 | 9.018 | -0.017 | -0.028 | ✗ |
-| Üst trend (yön) | 0.67 | 0.664 | +0.013 | +0.027 | ✗ |
-| VWAP'tan uzaklık ATR (yön) | 2.639 | 2.614 | +0.012 | +0.057 | ✓ |
+| BTC 1s yönü (yön) | 0.142 | 0.191 | -0.050 | -0.022 | ✗ |
+| Momentum (yön) | 0.242 | 0.254 | -0.028 | -0.035 | ✓ |
+| Z-Score (yön) | 0.845 | 0.871 | -0.026 | -0.047 | ✓ |
+| VWAP bileşeni (yön) | 0.69 | 0.682 | +0.023 | +0.007 | ✗ |
+| VWAP'tan uzaklık ATR (yön) | 2.586 | 2.549 | +0.019 | -0.009 | ✗ |
+| Dip-tepe konumu (yön) | 0.719 | 0.722 | -0.017 | -0.022 | ✗ |
+| Agresif alım-satım (yön) | 0.015 | 0.016 | -0.013 | +0.027 | ✗ |
+| RSI (yön, 50 merkez) | 8.819 | 8.896 | -0.010 | -0.041 | ✓ |
+| Üst trend (yön) | 0.663 | 0.66 | +0.008 | -0.001 | ✗ |
+| Likidite avı (yön) | -0.2 | -0.205 | +0.008 | +0.033 | ✓ |
 
 | Kural | Eğitim ort R (n) | Eğitim 1./2. yarı | TEST olay ort R (n) |
 |---|---|---|---|
-| ATR % ≥ 1.23 VE Dip-tepe konumu (yön) ≤ 0.70 VE Hacim (yön) ≥ -0.20 | 0.054 (6659) | 0.087 / 0.014 | -0.058 (2722) |
-| ATR % ≥ 0.99 VE Dip-tepe konumu (yön) ≤ 0.58 VE Likidite avı (yön) ≤ 0.00 | 0.047 (7328) | 0.061 / 0.03 | -0.114 (2577) |
-| ATR % ≥ 0.99 VE Dip-tepe konumu (yön) ≤ 0.58 VE FVG+Likidite (yön) ≤ 0.30 | 0.044 (7084) | 0.053 / 0.033 | -0.111 (2510) |
-| ATR % ≥ 0.99 VE Dip-tepe konumu (yön) ≤ 0.58 | 0.033 (8368) | 0.056 / 0.006 | -0.109 (3013) |
-| ATR % ≥ 1.23 VE VWAP bileşeni (yön) ≤ 0.75 | 0.018 (8090) | 0.029 / 0.005 | -0.108 (3543) |
 
 ## 5. 15m (limit girişli): kazananlar ve kaybedenler
 
-Tüm olaylar: kazanma %40.3 (eğitim) / %39.1 (test); ort. net R -0.128 / -0.155
+Tüm olaylar: kazanma %40.0 (eğitim) / %38.7 (test); ort. net R -0.147 / -0.171
 
 **Kazanan vs kaybeden girişte o anki durum** (etki = standart fark; ✓ = test döneminde de aynı yönde)
 
 | Özellik | Kazananlarda | Kaybedenlerde | Etki (eğitim) | Etki (test) | |
 |---|---|---|---|---|---|
-| VWAP bileşeni (yön) | 0.704 | 0.687 | +0.046 | +0.019 | ✗ |
-| Z-Score (yön) | 0.885 | 0.92 | -0.034 | -0.024 | ✗ |
-| BTC 1s yönü (yön) | 0.183 | 0.216 | -0.034 | -0.056 | ✓ |
-| Momentum (yön) | 0.257 | 0.271 | -0.033 | -0.018 | ✗ |
-| Hacim (yön) | 0.177 | 0.186 | -0.031 | +0.027 | ✗ |
-| Dip-tepe konumu (yön) | 0.726 | 0.73 | -0.029 | -0.031 | ✓ |
-| VWAP'tan uzaklık ATR (yön) | 2.679 | 2.625 | +0.027 | +0.050 | ✓ |
-| RSI (yön, 50 merkez) | 9.112 | 9.302 | -0.024 | -0.041 | ✓ |
-| Agresif alım-satım (yön) | 0.015 | 0.016 | -0.023 | +0.039 | ✗ |
-| ATR % | 0.739 | 0.73 | +0.020 | +0.001 | ✗ |
+| Momentum (yön) | 0.254 | 0.27 | -0.037 | -0.026 | ✗ |
+| VWAP bileşeni (yön) | 0.694 | 0.681 | +0.036 | -0.006 | ✗ |
+| Z-Score (yön) | 0.879 | 0.911 | -0.032 | -0.033 | ✓ |
+| BTC 1s yönü (yön) | 0.183 | 0.214 | -0.032 | -0.048 | ✓ |
+| VWAP'tan uzaklık ATR (yön) | 2.613 | 2.558 | +0.028 | -0.014 | ✗ |
+| Dip-tepe konumu (yön) | 0.722 | 0.727 | -0.026 | -0.019 | ✗ |
+| RSI (yön, 50 merkez) | 9.013 | 9.156 | -0.018 | -0.045 | ✓ |
+| RVOL | 1.113 | 1.134 | -0.016 | +0.002 | ✗ |
+| Agresif alım-satım (yön) | 0.016 | 0.017 | -0.016 | +0.032 | ✗ |
+| Likidite avı (yön) | -0.208 | -0.216 | +0.014 | +0.023 | ✗ |
 
 | Kural | Eğitim ort R (n) | Eğitim 1./2. yarı | TEST olay ort R (n) |
 |---|---|---|---|
-| ATR % ≥ 1.22 VE Hacim (yön) ≤ 0.18 VE Saat (UTC) ≥ 9.00 | 0.103 (5482) | 0.144 / 0.054 | -0.079 (1991) |
-| ATR % ≥ 1.22 VE Agresif alım-satım (yön) ≤ 0.00 VE Saat (UTC) ≥ 7.00 | 0.087 (5095) | 0.083 / 0.092 | -0.035 (1835) |
-| ATR % ≥ 1.22 VE Hacim (yön) ≤ 0.10 VE FVG+Likidite (yön) ≥ 0.00 | 0.085 (4781) | 0.123 / 0.041 | -0.132 (1943) |
-| ATR % ≥ 1.22 VE Hacim (yön) ≤ 0.10 | 0.067 (6189) | 0.088 / 0.043 | -0.102 (2477) |
-| ATR % ≥ 1.22 VE Agresif alım-satım (yön) ≤ 0.00 | 0.064 (6738) | 0.078 / 0.048 | -0.106 (2577) |
 
 ## 5. 1h (piyasa girişli): kazananlar ve kaybedenler
 
-Tüm olaylar: kazanma %40.8 (eğitim) / %42.6 (test); ort. net R -0.037 / 0.031
+Tüm olaylar: kazanma %40.5 (eğitim) / %40.0 (test); ort. net R -0.049 / -0.037
 
 **Kazanan vs kaybeden girişte o anki durum** (etki = standart fark; ✓ = test döneminde de aynı yönde)
 
 | Özellik | Kazananlarda | Kaybedenlerde | Etki (eğitim) | Etki (test) | |
 |---|---|---|---|---|---|
-| VWAP bileşeni (yön) | 0.43 | 0.399 | +0.083 | -0.032 | ✗ |
-| VWAP'tan uzaklık ATR (yön) | 1.127 | 1.052 | +0.070 | -0.022 | ✗ |
-| RSI (yön, 50 merkez) | 10.092 | 9.755 | +0.043 | -0.053 | ✗ |
-| Likidite avı (yön) | -0.242 | -0.218 | -0.042 | +0.061 | ✗ |
-| Hacim (yön) | 0.172 | 0.163 | +0.039 | -0.038 | ✗ |
-| Z-Score (yön) | 1.009 | 0.974 | +0.037 | -0.086 | ✗ |
-| Saat (UTC) | 11.414 | 11.637 | -0.032 | +0.028 | ✗ |
-| Agresif alım-satım (yön) | 0.008 | 0.009 | -0.028 | +0.027 | ✗ |
-| Dip-tepe konumu (yön) | 0.729 | 0.725 | +0.028 | +0.023 | ✗ |
-| RVOL | 1.073 | 1.106 | -0.024 | -0.080 | ✓ |
+| Hacim (yön) | 0.182 | 0.169 | +0.056 | -0.001 | ✗ |
+| VWAP'tan uzaklık ATR (yön) | 1.089 | 1.03 | +0.056 | +0.025 | ✗ |
+| VWAP bileşeni (yön) | 0.415 | 0.394 | +0.055 | +0.022 | ✗ |
+| Likidite avı (yön) | -0.235 | -0.211 | -0.041 | +0.008 | ✗ |
+| RSI (yön, 50 merkez) | 9.772 | 9.527 | +0.032 | +0.004 | ✗ |
+| Z-Score (yön) | 0.98 | 0.959 | +0.022 | -0.013 | ✗ |
+| Üst trend (yön) | 0.636 | 0.624 | +0.022 | +0.108 | ✓ |
+| Trend (yön) | 0.747 | 0.741 | +0.015 | +0.098 | ✓ |
+| FVG+Likidite (yön) | -0.006 | -0.0 | -0.013 | +0.043 | ✗ |
+| RVOL | 1.066 | 1.08 | -0.013 | -0.021 | ✗ |
 
 | Kural | Eğitim ort R (n) | Eğitim 1./2. yarı | TEST olay ort R (n) |
 |---|---|---|---|
-| RSI (yön, 50 merkez) ≥ 16.20 VE Saat (UTC) ≤ 7.00 VE ATR % ≤ 1.78 | 0.248 (1880) | 0.417 / 0.039 | -0.108 (794) |
+| VWAP bileşeni (yön) ≥ 0.57 VE Dip-tepe konumu (yön) ≤ 0.70 VE Trend (yön) ≥ 0.43 | 0.172 (1861) | 0.16 / 0.182 | 0.051 (509) |
+| VWAP bileşeni (yön) ≥ 0.57 VE Dip-tepe konumu (yön) ≤ 0.70 VE Üst trend (yön) ≥ 0.33 | 0.164 (1968) | 0.142 / 0.183 | 0.022 (530) |
+| VWAP'tan uzaklık ATR (yön) ≥ 1.28 VE Dip-tepe konumu (yön) ≤ 0.64 VE Üst trend (yön) ≥ -0.33 | 0.151 (1741) | 0.116 / 0.183 | 0.098 (438) |
+| FVG+Likidite (yön) ≤ -0.60 VE Saat (UTC) ≥ 12.00 VE RVOL ≤ 1.39 | 0.151 (1657) | 0.155 / 0.148 | 0.129 (709) |
+| VWAP bileşeni (yön) ≥ 0.57 VE Dip-tepe konumu (yön) ≤ 0.64 | 0.113 (2049) | 0.059 / 0.163 | 0.044 (547) |
 
 ## 5. 1h (limit girişli): kazananlar ve kaybedenler
 
-Tüm olaylar: kazanma %41.9 (eğitim) / %41.0 (test); ort. net R -0.012 / -0.021
+Tüm olaylar: kazanma %41.4 (eğitim) / %38.8 (test); ort. net R -0.03 / -0.082
 
 **Kazanan vs kaybeden girişte o anki durum** (etki = standart fark; ✓ = test döneminde de aynı yönde)
 
 | Özellik | Kazananlarda | Kaybedenlerde | Etki (eğitim) | Etki (test) | |
 |---|---|---|---|---|---|
-| VWAP bileşeni (yön) | 0.429 | 0.406 | +0.062 | -0.076 | ✗ |
-| VWAP'tan uzaklık ATR (yön) | 1.132 | 1.077 | +0.050 | -0.053 | ✗ |
-| Saat (UTC) | 11.374 | 11.663 | -0.042 | +0.063 | ✗ |
-| Hacim (yön) | 0.173 | 0.164 | +0.040 | -0.044 | ✗ |
-| Z-Score (yön) | 1.04 | 1.003 | +0.040 | -0.084 | ✗ |
-| Likidite avı (yön) | -0.243 | -0.221 | -0.037 | +0.049 | ✗ |
-| RSI (yön, 50 merkez) | 10.252 | 10.013 | +0.030 | -0.052 | ✗ |
-| RVOL | 1.108 | 1.146 | -0.027 | -0.051 | ✓ |
-| BTC 1s yönü (yön) | 0.262 | 0.237 | +0.025 | -0.039 | ✗ |
-| ATR % | 1.532 | 1.516 | +0.019 | -0.015 | ✗ |
+| Hacim (yön) | 0.183 | 0.169 | +0.057 | -0.039 | ✗ |
+| Dip-tepe konumu (yön) | 0.724 | 0.731 | -0.044 | -0.005 | ✗ |
+| Likidite avı (yön) | -0.235 | -0.216 | -0.033 | +0.021 | ✗ |
+| ATR % | 1.489 | 1.461 | +0.032 | -0.077 | ✗ |
+| VWAP'tan uzaklık ATR (yön) | 1.09 | 1.057 | +0.031 | -0.018 | ✗ |
+| VWAP bileşeni (yön) | 0.414 | 0.404 | +0.027 | -0.034 | ✗ |
+| RVOL | 1.092 | 1.118 | -0.024 | -0.022 | ✗ |
+| BTC 1s yönü (yön) | 0.25 | 0.228 | +0.023 | -0.028 | ✗ |
+| Z-Score (yön) | 1.009 | 0.991 | +0.019 | -0.023 | ✗ |
+| Momentum (yön) | 0.302 | 0.308 | -0.015 | +0.022 | ✗ |
 
 | Kural | Eğitim ort R (n) | Eğitim 1./2. yarı | TEST olay ort R (n) |
 |---|---|---|---|
-| Dip-tepe konumu (yön) ≤ 0.49 VE Hacim (yön) ≥ 0.11 VE Agresif alım-satım (yön) ≤ 0.05 | 0.27 (1202) | 0.292 / 0.252 | -0.003 (529) |
-| Dip-tepe konumu (yön) ≤ 0.49 VE VWAP bileşeni (yön) ≥ 0.24 VE Agresif alım-satım (yön) ≤ 0.05 | 0.262 (1212) | 0.332 / 0.199 | -0.089 (349) |
-| Dip-tepe konumu (yön) ≤ 0.49 VE VWAP'tan uzaklık ATR (yön) ≥ 0.49 VE Agresif alım-satım (yön) ≤ 0.05 | 0.262 (1212) | 0.332 / 0.199 | -0.089 (349) |
-| Dip-tepe konumu (yön) ≤ 0.49 VE VWAP bileşeni (yön) ≥ 0.24 VE Hacim (yön) ≥ -0.15 | 0.232 (1278) | 0.303 / 0.173 | -0.078 (378) |
-| Dip-tepe konumu (yön) ≤ 0.49 VE VWAP'tan uzaklık ATR (yön) ≥ 0.49 VE Hacim (yön) ≥ -0.15 | 0.232 (1278) | 0.303 / 0.173 | -0.078 (378) |
+| Dip-tepe konumu (yön) ≤ 0.49 VE VWAP bileşeni (yön) ≥ 0.23 VE Agresif alım-satım (yön) ≤ 0.05 | 0.316 (1214) | 0.573 / 0.069 | -0.02 (330) |
+| Dip-tepe konumu (yön) ≤ 0.49 VE VWAP'tan uzaklık ATR (yön) ≥ 0.47 VE Agresif alım-satım (yön) ≤ 0.05 | 0.316 (1214) | 0.573 / 0.069 | -0.02 (330) |
+| Dip-tepe konumu (yön) ≤ 0.49 VE VWAP bileşeni (yön) ≥ 0.23 VE ATR % ≥ 0.63 | 0.28 (1190) | 0.531 / 0.043 | 0.001 (338) |
+| Dip-tepe konumu (yön) ≤ 0.49 VE VWAP'tan uzaklık ATR (yön) ≥ 0.47 VE ATR % ≥ 0.63 | 0.28 (1190) | 0.531 / 0.043 | 0.001 (338) |
+| Dip-tepe konumu (yön) ≤ 0.49 VE VWAP bileşeni (yön) ≥ 0.23 | 0.26 (1368) | 0.515 / 0.037 | -0.008 (389) |
 
 IC (bilgi katsayısı): gösterge puanı ile sonraki getiri arasındaki sıralama korelasyonu. Piyasada 0.02–0.05 bile anlamlıdır; negatif ise gösterge ters çalışıyor demektir.
 Geçmiş performans geleceği garanti etmez.
